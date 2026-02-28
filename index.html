@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gist Memo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap');
+  :root {
+    --bg:#f5f2eb; --paper:#fdfcf8; --ink:#1a1814; --ink-light:#6b6760;
+    --accent:#c8441a; --border:#dedad2; --shadow:rgba(26,24,20,0.08);
+    --sidebar-w:270px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+  /* Topbar */
+  #topbar{display:flex;align-items:center;gap:0.8rem;padding:0.65rem 1.2rem;background:var(--paper);border-bottom:1px solid var(--border);flex-shrink:0;z-index:10;}
+  #topbar h1{font-family:'DM Mono',monospace;font-weight:300;font-size:1rem;letter-spacing:0.08em;}
+  #topbar h1 span{color:var(--accent);}
+  #status-badge{font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--ink-light);letter-spacing:0.04em;}
+  #autosave-indicator{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--ink-light);opacity:0;transition:opacity 0.4s;}
+  #autosave-indicator.show{opacity:1;}
+  .topbar-btn{background:transparent;border:1px solid var(--border);color:var(--ink-light);padding:0.32rem 0.75rem;font-family:'DM Mono',monospace;font-size:0.72rem;cursor:pointer;border-radius:3px;transition:all 0.15s;white-space:nowrap;}
+  .topbar-btn:hover{border-color:var(--ink-light);color:var(--ink);}
+  #btn-settings{margin-left:auto;}
+
+  /* Layout */
+  #main{display:flex;flex:1;overflow:hidden;}
+
+  /* Sidebar */
+  #sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--paper);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+  #sidebar-header{padding:0.8rem;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:0.6rem;}
+  #btn-new{background:var(--ink);color:var(--bg);padding:0.5rem;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:0.04em;cursor:pointer;border:none;border-radius:3px;width:100%;transition:background 0.15s;}
+  #btn-new:hover{background:var(--accent);}
+  #search{width:100%;padding:0.42rem 0.7rem;border:1px solid var(--border);border-radius:3px;background:var(--bg);font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);outline:none;transition:border-color 0.2s;}
+  #search:focus{border-color:var(--accent);}
+
+  /* Tag filter bar */
+  #tag-filter-bar{display:flex;flex-wrap:wrap;gap:0.3rem;padding:0.5rem 0.8rem;border-bottom:1px solid var(--border);min-height:34px;}
+  .tag-filter-chip{font-family:'DM Mono',monospace;font-size:0.65rem;padding:0.2rem 0.55rem;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--ink-light);cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .tag-filter-chip:hover{border-color:var(--accent);color:var(--accent);}
+  .tag-filter-chip.active{background:var(--accent);color:white;border-color:var(--accent);}
+
+  #memo-list{flex:1;overflow-y:auto;padding:0.3rem 0;}
+
+  /* Memo list items */
+  .memo-item{padding:0.7rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s;user-select:none;}
+  .memo-item:hover{background:var(--bg);}
+  .memo-item.active{background:var(--bg);border-left:3px solid var(--accent);padding-left:calc(1rem - 3px);}
+  .memo-item.drag-over{border-top:2px solid var(--accent);}
+  .memo-item.dragging{opacity:0.4;}
+  .memo-item.pinned{border-left:3px solid #e8a020;padding-left:calc(1rem - 3px);}
+  .memo-item.pinned.active{border-left:3px solid var(--accent);}
+  .memo-item-title{font-size:0.84rem;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:0.2rem;display:flex;align-items:center;gap:0.4rem;}
+  .memo-item-drag{color:var(--border);font-size:0.8rem;cursor:grab;flex-shrink:0;}
+  .pin-icon{font-size:0.7rem;flex-shrink:0;}
+
+  /* Export modal */
+  #export-modal{position:fixed;inset:0;background:rgba(26,24,20,0.5);display:none;align-items:center;justify-content:center;z-index:150;backdrop-filter:blur(2px);}
+  #export-modal.open{display:flex;}
+  #export-box{background:var(--paper);border:1px solid var(--border);border-radius:6px;padding:1.6rem;width:100%;max-width:360px;box-shadow:0 8px 32px var(--shadow);}
+  #export-box h3{font-family:'DM Mono',monospace;font-weight:400;font-size:0.82rem;letter-spacing:0.06em;color:var(--ink-light);text-transform:uppercase;margin-bottom:1.2rem;}
+  .export-option{display:flex;align-items:center;gap:0.8rem;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:4px;margin-bottom:0.5rem;cursor:pointer;transition:all 0.15s;background:transparent;}
+  .export-option:hover{border-color:var(--accent);background:var(--bg);}
+  .export-option-icon{font-size:1.2rem;width:28px;text-align:center;}
+  .export-option-label{font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--ink);}
+  .export-option-desc{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--ink-light);}
+  #export-cancel{margin-top:0.8rem;width:100%;}
+  .memo-item-meta{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--ink-light);}
+  .memo-item-preview{font-size:0.7rem;color:var(--ink-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:0.15rem;}
+  .memo-item-tags{display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.3rem;}
+  .tag-chip{font-family:'DM Mono',monospace;font-size:0.6rem;padding:0.1rem 0.45rem;border-radius:20px;background:#ede9e0;color:var(--ink-light);}
+
+  /* Editor */
+  #editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  #editor-header{padding:0.75rem 1.2rem;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:0.5rem;background:var(--paper);}
+  #title-input{font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:500;color:var(--ink);border:none;outline:none;background:transparent;width:100%;}
+  #title-input::placeholder{color:var(--border);}
+  #meta-info{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--ink-light);}
+
+  /* Tag editor */
+  #tag-editor{display:flex;flex-wrap:wrap;align-items:center;gap:0.3rem;}
+  .tag-edit-chip{font-family:'DM Mono',monospace;font-size:0.65rem;padding:0.15rem 0.5rem;border-radius:20px;background:#ede9e0;color:var(--ink-light);display:flex;align-items:center;gap:0.3rem;}
+  .tag-edit-chip button{background:none;border:none;cursor:pointer;color:var(--ink-light);font-size:0.75rem;padding:0;line-height:1;}
+  .tag-edit-chip button:hover{color:var(--accent);}
+  #tag-input{font-family:'DM Mono',monospace;font-size:0.68rem;border:1px dashed var(--border);border-radius:20px;padding:0.15rem 0.6rem;background:transparent;outline:none;color:var(--ink);width:100px;transition:border-color 0.2s;}
+  #tag-input:focus{border-color:var(--accent);}
+  #tag-input::placeholder{color:var(--border);}
+
+  #memo-body{flex:1;padding:1.4rem 2rem;font-family:'DM Mono',monospace;font-size:0.88rem;line-height:1.8;color:var(--ink);border:none;outline:none;resize:none;background:var(--paper);overflow-y:auto;}
+  #memo-body::placeholder{color:var(--border);}
+  #editor-footer{padding:0.6rem 1.2rem;border-top:1px solid var(--border);background:var(--bg);display:flex;align-items:center;gap:0.5rem;}
+  button.primary{background:var(--accent);color:white;padding:0.42rem 1rem;font-family:'DM Mono',monospace;font-size:0.78rem;cursor:pointer;border:none;border-radius:3px;transition:opacity 0.15s;}
+  button.primary:hover{opacity:0.85;}
+  button.primary:disabled{background:var(--border);color:var(--ink-light);cursor:not-allowed;}
+  button.ghost{background:transparent;color:var(--ink-light);padding:0.42rem 0.75rem;font-family:'DM Mono',monospace;font-size:0.78rem;cursor:pointer;border:1px solid var(--border);border-radius:3px;transition:all 0.15s;}
+  button.ghost:hover{border-color:var(--ink-light);color:var(--ink);}
+  button.danger{background:transparent;color:#c8441a;padding:0.42rem 0.75rem;font-family:'DM Mono',monospace;font-size:0.78rem;cursor:pointer;border:1px solid #e8b4a4;border-radius:3px;transition:all 0.15s;margin-left:auto;}
+  button.danger:hover{background:#fff0ed;}
+  #char-count{font-family:'DM Mono',monospace;font-size:0.67rem;color:var(--ink-light);}
+
+  /* Autosave toggle */
+  #autosave-wrap{display:flex;align-items:center;gap:0.4rem;margin-left:auto;}
+  .toggle{position:relative;display:inline-block;width:32px;height:18px;}
+  .toggle input{opacity:0;width:0;height:0;}
+  .toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:18px;cursor:pointer;transition:background 0.2s;}
+  .toggle-slider:before{content:'';position:absolute;width:12px;height:12px;left:3px;top:3px;background:white;border-radius:50%;transition:transform 0.2s;}
+  .toggle input:checked + .toggle-slider{background:var(--accent);}
+  .toggle input:checked + .toggle-slider:before{transform:translateX(14px);}
+  #autosave-label{font-family:'DM Mono',monospace;font-size:0.67rem;color:var(--ink-light);}
+
+  #empty-state{flex:1;display:flex;align-items:center;justify-content:center;background:var(--paper);}
+  #empty-state p{font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--ink-light);}
+  #editor{display:none;flex:1;flex-direction:column;overflow:hidden;}
+
+  /* Overlay */
+  #overlay{position:fixed;inset:0;background:rgba(245,242,235,0.92);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px);}
+  #setup-box{background:var(--paper);border:1px solid var(--border);border-radius:6px;padding:2rem;width:100%;max-width:440px;box-shadow:0 4px 24px var(--shadow);}
+  #setup-box h2{font-family:'DM Mono',monospace;font-weight:400;font-size:0.85rem;letter-spacing:0.06em;color:var(--ink-light);margin-bottom:1.5rem;text-transform:uppercase;}
+  .field{margin-bottom:1.1rem;}
+  .field label{display:block;font-size:0.72rem;font-family:'DM Mono',monospace;color:var(--ink-light);margin-bottom:0.35rem;letter-spacing:0.04em;}
+  .field input{width:100%;padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:3px;background:var(--bg);font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--ink);outline:none;transition:border-color 0.2s;}
+  .field input:focus{border-color:var(--accent);}
+  .field small{display:block;margin-top:0.3rem;font-size:0.68rem;color:var(--ink-light);}
+
+  /* Toast */
+  #toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--bg);font-family:'DM Mono',monospace;font-size:0.76rem;letter-spacing:0.04em;padding:0.55rem 1.3rem;border-radius:3px;opacity:0;transition:all 0.22s;pointer-events:none;white-space:nowrap;z-index:200;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  #toast.error{background:var(--accent);}
+
+  #btn-menu{display:none;background:transparent;border:1px solid var(--border);color:var(--ink-light);padding:0.32rem 0.65rem;font-size:1rem;cursor:pointer;border-radius:3px;line-height:1;}
+
+  @media(max-width:600px){
+    #sidebar{position:fixed;inset:0;top:45px;z-index:50;transform:translateX(-100%);transition:transform 0.25s;width:100%;min-width:unset;}
+    #sidebar.open{transform:translateX(0);}
+    #btn-menu{display:flex!important;}
+    #memo-body{padding:1rem;}
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <button id="btn-menu" onclick="toggleSidebar()">☰</button>
+  <h1>gist<span>.</span>memo</h1>
+  <span id="status-badge">—</span>
+  <span id="autosave-indicator">自動保存中…</span>
+  <button class="topbar-btn" id="btn-export-open">エクスポート</button>
+  <button class="topbar-btn" id="btn-settings">設定</button>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <button id="btn-new">＋ 新しいメモ</button>
+      <input id="search" type="search" placeholder="検索...">
+    </div>
+    <div id="tag-filter-bar"></div>
+    <div id="memo-list"></div>
+  </div>
+
+  <div id="editor-area">
+    <div id="empty-state"><p>← メモを選択するか、新規作成してください</p></div>
+    <div id="editor">
+      <div id="editor-header">
+        <input id="title-input" type="text" placeholder="タイトル">
+        <div id="tag-editor">
+          <input id="tag-input" type="text" placeholder="タグを追加…">
+        </div>
+        <div id="meta-info"></div>
+      </div>
+      <textarea id="memo-body" placeholder="ここにメモを書く..."></textarea>
+      <div id="editor-footer">
+        <button class="primary" id="btn-save">保存 (⌘S)</button>
+        <button class="ghost" id="btn-revert">元に戻す</button>
+        <span id="char-count">0 文字</span>
+        <div id="autosave-wrap">
+          <span id="autosave-label">自動保存</span>
+          <label class="toggle">
+            <input type="checkbox" id="autosave-toggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <button class="ghost" id="btn-pin">📌 ピン留め</button>
+        <button class="danger" id="btn-delete">削除</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="setup-box">
+    <h2>接続設定</h2>
+    <div class="field">
+      <label>GitHub Personal Access Token</label>
+      <input type="password" id="inp-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+      <small>scope: gist のみでOK</small>
+    </div>
+    <div class="field">
+      <label>Gist ID</label>
+      <input type="text" id="inp-gist" placeholder="abc123def456..." autocomplete="off">
+      <small>GistのURLの末尾の英数字文字列</small>
+    </div>
+    <div style="display:flex;gap:0.6rem;margin-top:0.5rem;">
+      <button class="primary" id="btn-connect">接続する</button>
+      <button class="ghost" id="btn-cancel-setup" style="display:none">キャンセル</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<!-- Export modal -->
+<div id="export-modal">
+  <div id="export-box">
+    <h3>エクスポート</h3>
+    <div class="export-option" id="exp-txt">
+      <span class="export-option-icon">📄</span>
+      <div>
+        <div class="export-option-label">テキスト (.txt)</div>
+        <div class="export-option-desc">本文のみをプレーンテキストで保存</div>
+      </div>
+    </div>
+    <div class="export-option" id="exp-md">
+      <span class="export-option-icon">📝</span>
+      <div>
+        <div class="export-option-label">Markdown (.md)</div>
+        <div class="export-option-desc">タイトル・タグ・本文をMarkdown形式で保存</div>
+      </div>
+    </div>
+    <div class="export-option" id="exp-all">
+      <span class="export-option-icon">📦</span>
+      <div>
+        <div class="export-option-label">全メモ一括 (.md)</div>
+        <div class="export-option-desc">すべてのメモを1ファイルにまとめて保存</div>
+      </div>
+    </div>
+    <button class="ghost" id="export-cancel">キャンセル</button>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let token='', gistId='', memos=[], currentId=null, savedSnapshot=null;
+let autosaveTimer=null, autosaveEnabled=false, pendingChanges=false;
+let activeTagFilter=null;
+
+// ── Init ──
+window.addEventListener('DOMContentLoaded', () => {
+  token  = localStorage.getItem('gm_token')   || '';
+  gistId = localStorage.getItem('gm_gist_id') || '';
+  autosaveEnabled = localStorage.getItem('gm_autosave') === 'true';
+  document.getElementById('autosave-toggle').checked = autosaveEnabled;
+  if (token && gistId) {
+    document.getElementById('inp-token').value = token;
+    document.getElementById('inp-gist').value  = gistId;
+    connect(false);
+  }
+});
+
+// ── Setup ──
+document.getElementById('btn-connect').addEventListener('click', () => connect(true));
+document.getElementById('btn-settings').addEventListener('click', () => {
+  document.getElementById('inp-token').value = token;
+  document.getElementById('inp-gist').value  = gistId;
+  document.getElementById('btn-cancel-setup').style.display = 'inline-block';
+  document.getElementById('overlay').style.display = 'flex';
+});
+document.getElementById('btn-cancel-setup').addEventListener('click', () => {
+  document.getElementById('overlay').style.display = 'none';
+});
+
+async function connect(showFeedback) {
+  token  = document.getElementById('inp-token').value.trim();
+  gistId = document.getElementById('inp-gist').value.trim();
+  if (!token || !gistId) { if(showFeedback) toast('TokenとGist IDを入力してください',true); return; }
+  setStatus('接続中…');
+  try {
+    const data = await apiGet();
+    localStorage.setItem('gm_token', token);
+    localStorage.setItem('gm_gist_id', gistId);
+    loadFromGist(data);
+    document.getElementById('overlay').style.display = 'none';
+    setStatus('接続済み');
+    if(showFeedback) toast('接続しました');
+  } catch(e) {
+    setStatus('エラー');
+    toast('接続失敗：Token または Gist ID を確認してください', true);
+  }
+}
+
+// ── Load ──
+function loadFromGist(data) {
+  const files = data.files;
+  const loaded = [];
+  let order = null;
+  if (files['index.json']) {
+    try { order = JSON.parse(files['index.json'].content); } catch(e) {}
+  }
+  for (const fname of Object.keys(files)) {
+    if (!fname.startsWith('memo_') || !fname.endsWith('.json')) continue;
+    try {
+      const m = JSON.parse(files[fname].content);
+      const id = fname.replace('memo_','').replace('.json','');
+      loaded.push({ id, title:m.title||'無題', body:m.body||'', tags:m.tags||[], pinned:m.pinned||false, createdAt:m.createdAt||null, updatedAt:m.updatedAt||null });
+    } catch(e) {}
+  }
+  if (loaded.length === 0) {
+    const oldFile = files['memo.txt'] || files[Object.keys(files)[0]];
+    const body = oldFile ? oldFile.content : '';
+    const now = new Date().toISOString();
+    loaded.push({ id:genId(), title:'最初のメモ', body, tags:[], pinned:false, createdAt:now, updatedAt:now });
+  }
+  if (order) {
+    loaded.sort((a,b) => { const ia=order.indexOf(a.id),ib=order.indexOf(b.id); if(ia===-1&&ib===-1)return 0; if(ia===-1)return 1; if(ib===-1)return -1; return ia-ib; });
+  } else {
+    loaded.sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+  }
+  memos = loaded;
+  savedSnapshot = deepClone(memos);
+  renderTagFilterBar();
+  renderList();
+  if (memos.length > 0) selectMemo(memos[0].id);
+}
+
+// ── All Tags ──
+function getAllTags() {
+  const set = new Set();
+  memos.forEach(m => (m.tags||[]).forEach(t => set.add(t)));
+  return [...set].sort();
+}
+
+// ── Tag filter bar ──
+function renderTagFilterBar() {
+  const bar = document.getElementById('tag-filter-bar');
+  bar.innerHTML = '';
+  const tags = getAllTags();
+  if (tags.length === 0) { bar.style.display='none'; return; }
+  bar.style.display='flex';
+  // All chip
+  const all = document.createElement('span');
+  all.className = 'tag-filter-chip' + (activeTagFilter===null?' active':'');
+  all.textContent = 'すべて';
+  all.addEventListener('click', () => { activeTagFilter=null; renderTagFilterBar(); renderList(); });
+  bar.appendChild(all);
+  tags.forEach(t => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-filter-chip' + (activeTagFilter===t?' active':'');
+    chip.textContent = '#'+t;
+    chip.addEventListener('click', () => {
+      activeTagFilter = (activeTagFilter===t) ? null : t;
+      renderTagFilterBar(); renderList();
+    });
+    bar.appendChild(chip);
+  });
+}
+
+// ── Memo list ──
+function renderList(filter) {
+  const list = document.getElementById('memo-list');
+  list.innerHTML = '';
+  const q = (filter !== undefined ? filter : document.getElementById('search').value).toLowerCase();
+  let shown = memos.filter(m => m.title.toLowerCase().includes(q) || m.body.toLowerCase().includes(q));
+  if (activeTagFilter) shown = shown.filter(m => (m.tags||[]).includes(activeTagFilter));
+
+  // ピン留め優先ソート（検索・タグフィルター後）
+  shown.sort((a,b) => (b.pinned?1:0)-(a.pinned?1:0));
+  shown.forEach((m, i) => {
+    const el = document.createElement('div');
+    el.className = 'memo-item' + (m.id===currentId?' active':'') + (m.pinned?' pinned':'');
+    el.dataset.id = m.id;
+    el.draggable = true;
+
+    const tagsHtml = (m.tags||[]).length > 0
+      ? '<div class="memo-item-tags">'+m.tags.map(t=>'<span class="tag-chip">#'+esc(t)+'</span>').join('')+'</div>'
+      : '';
+
+    el.innerHTML = `
+      <div class="memo-item-title">
+        <span class="memo-item-drag" title="ドラッグして並び替え">⠿</span>
+        ${m.pinned?'<span class="pin-icon">📌</span>':''}
+        ${esc(m.title||'無題')}
+      </div>
+      <div class="memo-item-meta">${m.updatedAt?fmtDate(m.updatedAt):'—'}</div>
+      <div class="memo-item-preview">${esc((m.body||'').replace(/\n/g,' ').slice(0,60))}</div>
+      ${tagsHtml}
+    `;
+
+    el.addEventListener('click', () => { closeSidebar(); selectMemo(m.id); });
+
+    // Drag & Drop
+    el.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', m.id);
+      setTimeout(() => el.classList.add('dragging'), 0);
+    });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+    el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+    el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+    el.addEventListener('drop', e => {
+      e.preventDefault();
+      el.classList.remove('drag-over');
+      const fromId = e.dataTransfer.getData('text/plain');
+      const toId = m.id;
+      if (fromId === toId) return;
+      const fromIdx = memos.findIndex(x=>x.id===fromId);
+      const toIdx   = memos.findIndex(x=>x.id===toId);
+      if (fromIdx===-1||toIdx===-1) return;
+      const [moved] = memos.splice(fromIdx, 1);
+      memos.splice(toIdx, 0, moved);
+      renderList();
+      markPending();
+    });
+
+    list.appendChild(el);
+  });
+}
+
+document.getElementById('search').addEventListener('input', e => renderList(e.target.value));
+
+// ── Select memo ──
+function selectMemo(id) {
+  currentId = id;
+  const m = memos.find(x=>x.id===id);
+  if (!m) return;
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('editor').style.display = 'flex';
+  document.getElementById('title-input').value = m.title||'';
+  document.getElementById('memo-body').value   = m.body||'';
+  updateCount(); updateMeta(m); renderTagEditor(m); updatePinBtn(m); renderList();
+}
+
+function updateMeta(m) {
+  const el = document.getElementById('meta-info');
+  if (!m) { el.textContent=''; return; }
+  const parts=[];
+  if(m.createdAt) parts.push('作成: '+fmtDate(m.createdAt));
+  if(m.updatedAt) parts.push('更新: '+fmtDate(m.updatedAt));
+  el.textContent = parts.join('　');
+}
+
+// ── Tag editor ──
+function renderTagEditor(m) {
+  const editor = document.getElementById('tag-editor');
+  // remove old chips
+  [...editor.querySelectorAll('.tag-edit-chip')].forEach(c=>c.remove());
+  const inp = document.getElementById('tag-input');
+  (m.tags||[]).forEach(t => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-edit-chip';
+    chip.innerHTML = '#'+esc(t)+' <button title="削除">×</button>';
+    chip.querySelector('button').addEventListener('click', () => {
+      m.tags = m.tags.filter(x=>x!==t);
+      renderTagEditor(m); renderTagFilterBar(); renderList(); markPending();
+    });
+    editor.insertBefore(chip, inp);
+  });
+}
+
+document.getElementById('tag-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const val = e.target.value.trim().replace(/[,#\s]+/g,'');
+    if (!val) return;
+    const m = memos.find(x=>x.id===currentId);
+    if (!m) return;
+    if (!m.tags) m.tags=[];
+    if (!m.tags.includes(val)) {
+      m.tags.push(val);
+      renderTagEditor(m); renderTagFilterBar(); renderList(); markPending();
+    }
+    e.target.value = '';
+  }
+  if (e.key === 'Backspace' && e.target.value === '') {
+    const m = memos.find(x=>x.id===currentId);
+    if (m && m.tags && m.tags.length > 0) {
+      m.tags.pop();
+      renderTagEditor(m); renderTagFilterBar(); renderList(); markPending();
+    }
+  }
+});
+
+// ── Sync editor to state ──
+document.getElementById('title-input').addEventListener('input', syncEditor);
+document.getElementById('memo-body').addEventListener('input', () => { syncEditor(); updateCount(); markPending(); });
+
+function syncEditor() {
+  const m = memos.find(x=>x.id===currentId);
+  if (!m) return;
+  m.title = document.getElementById('title-input').value;
+  m.body  = document.getElementById('memo-body').value;
+  renderList();
+}
+
+function updateCount() {
+  document.getElementById('char-count').textContent = document.getElementById('memo-body').value.length+' 文字';
+}
+
+// ── New ──
+document.getElementById('btn-new').addEventListener('click', () => {
+  const now = new Date().toISOString();
+  const m = { id:genId(), title:'', body:'', tags:[], pinned:false, createdAt:now, updatedAt:now };
+  memos.unshift(m);
+  renderTagFilterBar(); renderList(); selectMemo(m.id);
+  document.getElementById('title-input').focus();
+  closeSidebar();
+});
+
+// ── Save ──
+document.getElementById('btn-save').addEventListener('click', save);
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); save(); }
+});
+
+async function save(silent=false) {
+  if (!currentId) return;
+  const m = memos.find(x=>x.id===currentId);
+  if (!m) return;
+  m.updatedAt = new Date().toISOString();
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  setStatus('保存中…');
+  if (autosaveEnabled) showAutosaveIndicator();
+  try {
+    await apiPatch(buildPatch());
+    savedSnapshot = deepClone(memos);
+    pendingChanges = false;
+    setStatus('保存済み');
+    if (!silent) toast('保存しました ✓');
+    updateMeta(m); renderList();
+  } catch(e) {
+    setStatus('保存失敗');
+    if (!silent) toast('保存に失敗しました', true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Autosave ──
+document.getElementById('autosave-toggle').addEventListener('change', e => {
+  autosaveEnabled = e.target.checked;
+  localStorage.setItem('gm_autosave', autosaveEnabled);
+  if (!autosaveEnabled) { clearInterval(autosaveTimer); autosaveTimer=null; }
+  else scheduleAutosave();
+  toast(autosaveEnabled ? '自動保存 ON（30秒ごと）' : '自動保存 OFF');
+});
+
+function scheduleAutosave() {
+  if (autosaveTimer) clearInterval(autosaveTimer);
+  if (!autosaveEnabled) return;
+  autosaveTimer = setInterval(() => {
+    if (pendingChanges) save(true);
+  }, 30000);
+}
+
+function markPending() {
+  pendingChanges = true;
+  if (autosaveEnabled && !autosaveTimer) scheduleAutosave();
+}
+
+function showAutosaveIndicator() {
+  const el = document.getElementById('autosave-indicator');
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ── Revert ──
+document.getElementById('btn-revert').addEventListener('click', () => {
+  if (!confirm('最後に保存した状態に戻しますか？')||!savedSnapshot) return;
+  memos = deepClone(savedSnapshot);
+  renderTagFilterBar(); renderList();
+  const still = memos.find(x=>x.id===currentId);
+  if (still) selectMemo(still.id);
+  else { currentId=null; document.getElementById('editor').style.display='none'; document.getElementById('empty-state').style.display='flex'; }
+});
+
+// ── Delete ──
+document.getElementById('btn-delete').addEventListener('click', async () => {
+  if (!currentId) return;
+  const m = memos.find(x=>x.id===currentId);
+  if (!confirm('「'+(m?.title||'無題')+'」を削除しますか？')) return;
+  memos = memos.filter(x=>x.id!==currentId);
+  currentId=null;
+  document.getElementById('editor').style.display='none';
+  document.getElementById('empty-state').style.display='flex';
+  renderTagFilterBar(); renderList();
+  setStatus('削除中…');
+  try {
+    await apiPatch(buildPatch());
+    savedSnapshot=deepClone(memos);
+    setStatus('保存済み'); toast('削除しました');
+  } catch(e) { setStatus('削除失敗'); toast('削除に失敗しました',true); }
+});
+
+// ── Build Patch ──
+function buildPatch() {
+  const files={};
+  files['index.json']={ content: JSON.stringify(memos.map(m=>m.id)) };
+  memos.forEach(m => {
+    files['memo_'+m.id+'.json']={ content: JSON.stringify({title:m.title,body:m.body,tags:m.tags||[],pinned:m.pinned||false,createdAt:m.createdAt,updatedAt:m.updatedAt}) };
+  });
+  if (savedSnapshot) {
+    const cur=new Set(memos.map(m=>m.id));
+    savedSnapshot.forEach(m=>{ if(!cur.has(m.id)) files['memo_'+m.id+'.json']=null; });
+  }
+  files['memo.txt']=null;
+  return files;
+}
+
+// ── API ──
+async function apiGet() {
+  const res = await fetch('https://api.github.com/gists/'+gistId,{
+    headers:{ Authorization:'token '+token, Accept:'application/vnd.github.v3+json' }
+  });
+  if(!res.ok) throw new Error(res.status);
+  return res.json();
+}
+async function apiPatch(files) {
+  const res = await fetch('https://api.github.com/gists/'+gistId,{
+    method:'PATCH',
+    headers:{ Authorization:'token '+token, Accept:'application/vnd.github.v3+json', 'Content-Type':'application/json' },
+    body: JSON.stringify({files})
+  });
+  if(!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
+// ── Mobile ──
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); }
+
+// ── Utils ──
+function genId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function deepClone(x){ return JSON.parse(JSON.stringify(x)); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtDate(iso){
+  if(!iso)return '';
+  const d=new Date(iso),p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+}
+function setStatus(msg){ document.getElementById('status-badge').textContent=msg; }
+let toastTimer;
+function toast(msg,isError=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='show'+(isError?' error':'');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.className='',2800);
+}
+
+// ── Pin ──
+document.getElementById('btn-pin').addEventListener('click', () => {
+  const m = memos.find(x=>x.id===currentId);
+  if (!m) return;
+  m.pinned = !m.pinned;
+  updatePinBtn(m);
+  renderList();
+  markPending();
+  toast(m.pinned ? '📌 ピン留めしました' : 'ピン留めを解除しました');
+});
+
+function updatePinBtn(m) {
+  const btn = document.getElementById('btn-pin');
+  if (!btn) return;
+  btn.textContent = m?.pinned ? '📌 解除' : '📌 ピン留め';
+  btn.style.color = m?.pinned ? 'var(--accent)' : '';
+  btn.style.borderColor = m?.pinned ? 'var(--accent)' : '';
+}
+
+// ── Export ──
+document.getElementById('btn-export-open').addEventListener('click', () => {
+  document.getElementById('export-modal').classList.add('open');
+});
+document.getElementById('export-cancel').addEventListener('click', () => {
+  document.getElementById('export-modal').classList.remove('open');
+});
+document.getElementById('export-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('export-modal'))
+    document.getElementById('export-modal').classList.remove('open');
+});
+
+document.getElementById('exp-txt').addEventListener('click', () => {
+  const m = memos.find(x=>x.id===currentId);
+  if (!m) { toast('メモを選択してください', true); return; }
+  download(m.title||'memo', '.txt', m.body);
+  document.getElementById('export-modal').classList.remove('open');
+});
+
+document.getElementById('exp-md').addEventListener('click', () => {
+  const m = memos.find(x=>x.id===currentId);
+  if (!m) { toast('メモを選択してください', true); return; }
+  const tags = (m.tags||[]).length > 0 ? '\ntags: ' + m.tags.map(t=>'#'+t).join(' ') : '';
+  const updated = m.updatedAt ? '\nupdated: ' + fmtDate(m.updatedAt) : '';
+  const content = '# ' + (m.title||'無題') + tags + updated + '\n\n' + m.body;
+  download(m.title||'memo', '.md', content);
+  document.getElementById('export-modal').classList.remove('open');
+});
+
+document.getElementById('exp-all').addEventListener('click', () => {
+  const lines = memos.map(m => {
+    const tags = (m.tags||[]).length > 0 ? '\ntags: ' + m.tags.map(t=>'#'+t).join(' ') : '';
+    const updated = m.updatedAt ? '\nupdated: ' + fmtDate(m.updatedAt) : '';
+    return '# ' + (m.title||'無題') + tags + updated + '\n\n' + m.body;
+  });
+  download('gist-memo-all', '.md', lines.join('\n\n---\n\n'));
+  document.getElementById('export-modal').classList.remove('open');
+});
+
+function download(name, ext, text) {
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name.replace(/[/\\:*?"<>|]/g,'_') + ext;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('ダウンロードしました ✓');
+}
+</script>
+</body>
+</html>
