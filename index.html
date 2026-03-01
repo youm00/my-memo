@@ -11,6 +11,10 @@
     --accent:#c8441a; --border:#dedad2; --shadow:rgba(26,24,20,0.08);
     --sidebar-w:270px;
   }
+  [data-theme="dark"] {
+    --bg:#1a1814; --paper:#222018; --ink:#e8e4dc; --ink-light:#8a8680;
+    --accent:#e05a2b; --border:#2e2c28; --shadow:rgba(0,0,0,0.3);
+  }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column;}
 
@@ -86,7 +90,7 @@
   .memo-item-meta{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--ink-light);}
   .memo-item-preview{font-size:0.7rem;color:var(--ink-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:0.15rem;}
   .memo-item-tags{display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.3rem;}
-  .tag-chip{font-family:'DM Mono',monospace;font-size:0.6rem;padding:0.1rem 0.45rem;border-radius:20px;background:#ede9e0;color:var(--ink-light);}
+  .tag-chip{font-family:'DM Mono',monospace;font-size:0.6rem;padding:0.1rem 0.45rem;border-radius:20px;background:var(--border);color:var(--ink-light);}
 
   /* Editor */
   #editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
@@ -97,7 +101,7 @@
 
   /* Tag editor */
   #tag-editor{display:flex;flex-wrap:wrap;align-items:center;gap:0.3rem;}
-  .tag-edit-chip{font-family:'DM Mono',monospace;font-size:0.65rem;padding:0.15rem 0.5rem;border-radius:20px;background:#ede9e0;color:var(--ink-light);display:flex;align-items:center;gap:0.3rem;}
+  .tag-edit-chip{font-family:'DM Mono',monospace;font-size:0.65rem;padding:0.15rem 0.5rem;border-radius:20px;background:var(--border);color:var(--ink-light);display:flex;align-items:center;gap:0.3rem;}
   .tag-edit-chip button{background:none;border:none;cursor:pointer;color:var(--ink-light);font-size:0.75rem;padding:0;line-height:1;}
   .tag-edit-chip button:hover{color:var(--accent);}
   #tag-input{font-family:'DM Mono',monospace;font-size:0.68rem;border:1px dashed var(--border);border-radius:20px;padding:0.15rem 0.6rem;background:transparent;outline:none;color:var(--ink);width:100px;transition:border-color 0.2s;}
@@ -163,6 +167,7 @@
   <h1>gist<span>.</span>memo</h1>
   <span id="status-badge">—</span>
   <span id="autosave-indicator">自動保存中…</span>
+  <button class="topbar-btn" id="btn-darkmode" title="ダークモード切替">🌙</button>
   <button class="topbar-btn" id="btn-backup-open">バックアップ</button>
   <button class="topbar-btn" id="btn-export-open">エクスポート</button>
   <button class="topbar-btn" id="btn-settings">設定</button>
@@ -862,6 +867,34 @@ function restoreBackup(snapshot, dateStr) {
   // Gistにも反映
   apiPatch(buildPatch()).catch(() => toast('Gistへの反映に失敗しました', true));
 }
+
+// ── Dark mode ──
+function applyTheme(dark) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  document.getElementById('btn-darkmode').textContent = dark ? '☀️' : '🌙';
+}
+
+document.getElementById('btn-darkmode').addEventListener('click', () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const next = !isDark;
+  localStorage.setItem('gm_darkmode', next);
+  applyTheme(next);
+});
+
+// 初期化：localStorage → OSの設定の順で判定
+(function initTheme() {
+  const saved = localStorage.getItem('gm_darkmode');
+  if (saved !== null) {
+    applyTheme(saved === 'true');
+  } else {
+    applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+})();
+
+// OSのダークモード変更を検知（localStorage未設定時のみ）
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+  if (localStorage.getItem('gm_darkmode') === null) applyTheme(e.matches);
+});
 </script>
 </body>
 </html>
