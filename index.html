@@ -353,6 +353,8 @@ function loadFromGist(data) {
     .filter(f => f.startsWith('bk_') && f.endsWith('.json'))
     .map(f => f.replace('.json',''))
     .sort();
+  // Gist上に実在するファイル名を記録
+  knownFiles = new Set(Object.keys(data.files));
   renderTagFilterBar();
   renderList();
   if (memos.length > 0) selectMemo(memos[0].id);
@@ -634,11 +636,16 @@ function buildPatch() {
   memos.forEach(m => {
     files['memo_'+m.id+'.json']={ content: JSON.stringify({title:m.title,body:m.body,tags:m.tags||[],pinned:m.pinned||false,createdAt:m.createdAt,updatedAt:m.updatedAt}) };
   });
+  // 削除されたメモのファイルを消す（savedSnapshotに存在したもののみ）
   if (savedSnapshot) {
-    const cur=new Set(memos.map(m=>m.id));
+    const cur = new Set(memos.map(m=>m.id));
     savedSnapshot.forEach(m=>{ if(!cur.has(m.id)) files['memo_'+m.id+'.json']=null; });
   }
-  files['memo.txt']=null;
+  // memo.txt は初回のみ存在する可能性があるため、knownFiles に含まれる場合のみ削除
+  if (knownFiles.has('memo.txt')) {
+    files['memo.txt'] = null;
+    knownFiles.delete('memo.txt');
+  }
   return files;
 }
 
@@ -770,6 +777,7 @@ document.getElementById('btn-backup-now').addEventListener('click', async () => 
 
 // バックアップキー一覧はメモリで管理（余分なAPI呼び出しを避ける）
 let backupKeys = []; // ロード時に初期化
+let knownFiles = new Set(); // Gist上に実在するファイル名を追跡
 
 async function createBackup(silent=false) {
   if (memos.length === 0) return;
