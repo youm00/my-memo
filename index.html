@@ -348,6 +348,11 @@ function loadFromGist(data) {
   }
   memos = loaded;
   savedSnapshot = deepClone(memos);
+  // バックアップキー一覧をメモリに読み込む
+  backupKeys = Object.keys(data.files)
+    .filter(f => f.startsWith('bk_') && f.endsWith('.json'))
+    .map(f => f.replace('.json',''))
+    .sort();
   renderTagFilterBar();
   renderList();
   if (memos.length > 0) selectMemo(memos[0].id);
@@ -763,25 +768,23 @@ document.getElementById('btn-backup-now').addEventListener('click', async () => 
   renderBackupList();
 });
 
+// バックアップキー一覧はメモリで管理（余分なAPI呼び出しを避ける）
+let backupKeys = []; // ロード時に初期化
+
 async function createBackup(silent=false) {
   if (memos.length === 0) return;
   const now = new Date();
   const key = 'bk_' + now.toISOString().replace(/[:.]/g,'').slice(0,15);
-  const snapshot = {
-    createdAt: now.toISOString(),
-    memos: deepClone(memos)
-  };
-
-  // 既存バックアップ一覧を取得して古いものを削除
-  const existing = await getBackupKeys();
+  const snapshot = { createdAt: now.toISOString(), memos: deepClone(memos) };
   const files = {};
 
   // 新しいバックアップを追加
   files[key + '.json'] = { content: JSON.stringify(snapshot) };
 
-  // 10件を超える古いバックアップを削除
-  if (existing.length >= BACKUP_MAX) {
-    const toDelete = existing.slice(0, existing.length - BACKUP_MAX + 1);
+  // メモリ上のキー一覧を更新し、超過分を削除
+  backupKeys = [...backupKeys, key].sort();
+  if (backupKeys.length > BACKUP_MAX) {
+    const toDelete = backupKeys.splice(0, backupKeys.length - BACKUP_MAX);
     toDelete.forEach(k => { files[k + '.json'] = null; });
   }
 
@@ -789,18 +792,10 @@ async function createBackup(silent=false) {
     await apiPatch(files);
     if (!silent) toast('バックアップを作成しました ✓');
   } catch(e) {
+    // 失敗した場合はキー一覧を元に戻す
+    backupKeys = backupKeys.filter(k => k !== key);
     if (!silent) toast('バックアップの作成に失敗しました', true);
   }
-}
-
-async function getBackupKeys() {
-  try {
-    const data = await apiGet();
-    return Object.keys(data.files)
-      .filter(f => f.startsWith('bk_') && f.endsWith('.json'))
-      .map(f => f.replace('.json',''))
-      .sort();
-  } catch(e) { return []; }
 }
 
 async function renderBackupList() {
