@@ -144,6 +144,18 @@
   .field input:focus{border-color:var(--accent);}
   .field small{display:block;margin-top:0.3rem;font-size:0.68rem;color:var(--ink-light);}
 
+
+  /* Offline banner */
+  #offline-banner{display:none;position:fixed;top:0;left:0;right:0;z-index:300;background:#e8a020;color:white;font-family:'DM Mono',monospace;font-size:0.75rem;text-align:center;padding:0.4rem;letter-spacing:0.04em;}
+  #offline-banner.show{display:block;}
+
+  /* Sync dialog */
+  #sync-modal{position:fixed;inset:0;background:rgba(26,24,20,0.6);display:none;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(2px);}
+  #sync-modal.open{display:flex;}
+  #sync-box{background:var(--paper);border:1px solid var(--border);border-radius:6px;padding:1.8rem;width:100%;max-width:400px;box-shadow:0 8px 32px var(--shadow);}
+  #sync-box h3{font-family:'DM Mono',monospace;font-weight:400;font-size:0.85rem;letter-spacing:0.06em;color:var(--ink-light);text-transform:uppercase;margin-bottom:0.8rem;}
+  #sync-box p{font-size:0.85rem;color:var(--ink);margin-bottom:1.4rem;line-height:1.6;}
+  #sync-box .btn-row{display:flex;gap:0.6rem;}
   /* Toast */
   #toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--bg);font-family:'DM Mono',monospace;font-size:0.76rem;letter-spacing:0.04em;padding:0.55rem 1.3rem;border-radius:3px;opacity:0;transition:all 0.22s;pointer-events:none;white-space:nowrap;z-index:200;}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -159,6 +171,103 @@
     #memo-list{padding-bottom:env(safe-area-inset-bottom);}
   }
 </style>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW:', e));
+}
+
+// ── Offline support ──
+
+function updateOfflineBanner() {
+  const banner = document.getElementById('offline-banner');
+  if (!navigator.onLine) {
+    banner.classList.add('show');
+    // topbarを少し下げてバナーと被らないようにする
+    document.getElementById('topbar').style.marginTop = '28px';
+  } else {
+    banner.classList.remove('show');
+    document.getElementById('topbar').style.marginTop = '';
+  }
+}
+
+// オフラインになったとき
+window.addEventListener('offline', () => {
+  isOffline = true;
+  updateOfflineBanner();
+  toast('オフラインになりました', true);
+});
+
+// オンラインに復帰したとき
+window.addEventListener('online', () => {
+  isOffline = false;
+  updateOfflineBanner();
+
+  // オフライン中に編集があった場合、同期ダイアログを表示
+  const localData = localStorage.getItem('gm_offline_draft');
+  if (localData) {
+    document.getElementById('sync-modal').classList.add('open');
+  } else {
+    toast('オンラインに復帰しました');
+  }
+});
+
+// 同期する
+document.getElementById('btn-sync-upload').addEventListener('click', async () => {
+  document.getElementById('sync-modal').classList.remove('open');
+  const localData = localStorage.getItem('gm_offline_draft');
+  if (!localData) return;
+  try {
+    const draft = JSON.parse(localData);
+    memos = draft.memos;
+    savedSnapshot = deepClone(memos);
+    knownFiles = new Set(draft.knownFiles || [...knownFiles]);
+    backupKeys = draft.backupKeys || backupKeys;
+    renderTagFilterBar(); renderList();
+    const still = memos.find(x => x.id === currentId);
+    if (still) selectMemo(still.id);
+    else if (memos.length > 0) selectMemo(memos[0].id);
+    await apiPatch(buildPatch());
+    localStorage.removeItem('gm_offline_draft');
+    offlineEdited = false;
+    toast('Gistに同期しました ✓');
+  } catch(e) {
+    toast('同期に失敗しました', true);
+  }
+});
+
+// 破棄してGistから読み込む
+document.getElementById('btn-sync-discard').addEventListener('click', async () => {
+  document.getElementById('sync-modal').classList.remove('open');
+  localStorage.removeItem('gm_offline_draft');
+  offlineEdited = false;
+  setStatus('再読み込み中…');
+  try {
+    const data = await apiGet();
+    loadFromGist(data);
+    toast('Gistから再読み込みしました');
+  } catch(e) {
+    toast('読み込みに失敗しました', true);
+  }
+});
+
+// オフライン中の編集をlocalStorageに保存
+function saveOfflineDraft() {
+  if (!isOffline) return;
+  offlineEdited = true;
+  const draft = {
+    memos: deepClone(memos),
+    knownFiles: [...knownFiles],
+    backupKeys: [...backupKeys],
+    savedAt: new Date().toISOString()
+  };
+  localStorage.setItem('gm_offline_draft', JSON.stringify(draft));
+}
+
+// 初期化時にオフライン状態を反映
+window.addEventListener('DOMContentLoaded', () => {
+  updateOfflineBanner();
+});
+</script>
 </head>
 <body>
 
@@ -228,6 +337,17 @@
     <div style="display:flex;gap:0.6rem;margin-top:0.5rem;">
       <button class="primary" id="btn-connect">接続する</button>
       <button class="ghost" id="btn-cancel-setup" style="display:none">キャンセル</button>
+    </div>
+  </div>
+</div>
+<div id="offline-banner">📡 オフライン中 — 編集内容はローカルに保存されます</div>
+<div id="sync-modal">
+  <div id="sync-box">
+    <h3>オフライン中の編集があります</h3>
+    <p>ネットワークが復帰しました。オフライン中に編集した内容をGistに同期しますか？</p>
+    <div class="btn-row">
+      <button class="primary" id="btn-sync-upload">Gistに同期する</button>
+      <button class="ghost" id="btn-sync-discard">破棄してGistから読み込む</button>
     </div>
   </div>
 </div>
@@ -558,6 +678,16 @@ async function save(silent=false) {
   const m = memos.find(x=>x.id===currentId);
   if (!m) return;
   m.updatedAt = new Date().toISOString();
+
+  // オフライン時はlocalStorageのみに保存
+  if (!navigator.onLine) {
+    saveOfflineDraft();
+    setStatus('ローカル保存済み');
+    if (!silent) toast('オフライン中 — ローカルに保存しました');
+    renderList(); updateMeta(m);
+    return;
+  }
+
   const btn = document.getElementById('btn-save');
   btn.disabled = true;
   setStatus('保存中…');
@@ -598,6 +728,7 @@ function scheduleAutosave() {
 function markPending() {
   pendingChanges = true;
   if (autosaveEnabled && !autosaveTimer) scheduleAutosave();
+  saveOfflineDraft(); // オフライン中はlocalStorageに保存
 }
 
 function showAutosaveIndicator() {
@@ -782,7 +913,9 @@ document.getElementById('btn-backup-now').addEventListener('click', async () => 
 
 // バックアップキー一覧はメモリで管理（余分なAPI呼び出しを避ける）
 let backupKeys = []; // ロード時に初期化
-let knownFiles = new Set(); // Gist上に実在するファイル名を追跡
+let knownFiles = new Set();
+let isOffline = !navigator.onLine;
+let offlineEdited = false; // オフライン中に編集があったか // Gist上に実在するファイル名を追跡
 
 async function createBackup(silent=false) {
   if (memos.length === 0) return;
@@ -894,6 +1027,98 @@ document.getElementById('btn-darkmode').addEventListener('click', () => {
 // OSのダークモード変更を検知（localStorage未設定時のみ）
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
   if (localStorage.getItem('gm_darkmode') === null) applyTheme(e.matches);
+});
+
+// ── Offline support ──
+
+function updateOfflineBanner() {
+  const banner = document.getElementById('offline-banner');
+  if (!navigator.onLine) {
+    banner.classList.add('show');
+    // topbarを少し下げてバナーと被らないようにする
+    document.getElementById('topbar').style.marginTop = '28px';
+  } else {
+    banner.classList.remove('show');
+    document.getElementById('topbar').style.marginTop = '';
+  }
+}
+
+// オフラインになったとき
+window.addEventListener('offline', () => {
+  isOffline = true;
+  updateOfflineBanner();
+  toast('オフラインになりました', true);
+});
+
+// オンラインに復帰したとき
+window.addEventListener('online', () => {
+  isOffline = false;
+  updateOfflineBanner();
+
+  // オフライン中に編集があった場合、同期ダイアログを表示
+  const localData = localStorage.getItem('gm_offline_draft');
+  if (localData) {
+    document.getElementById('sync-modal').classList.add('open');
+  } else {
+    toast('オンラインに復帰しました');
+  }
+});
+
+// 同期する
+document.getElementById('btn-sync-upload').addEventListener('click', async () => {
+  document.getElementById('sync-modal').classList.remove('open');
+  const localData = localStorage.getItem('gm_offline_draft');
+  if (!localData) return;
+  try {
+    const draft = JSON.parse(localData);
+    memos = draft.memos;
+    savedSnapshot = deepClone(memos);
+    knownFiles = new Set(draft.knownFiles || [...knownFiles]);
+    backupKeys = draft.backupKeys || backupKeys;
+    renderTagFilterBar(); renderList();
+    const still = memos.find(x => x.id === currentId);
+    if (still) selectMemo(still.id);
+    else if (memos.length > 0) selectMemo(memos[0].id);
+    await apiPatch(buildPatch());
+    localStorage.removeItem('gm_offline_draft');
+    offlineEdited = false;
+    toast('Gistに同期しました ✓');
+  } catch(e) {
+    toast('同期に失敗しました', true);
+  }
+});
+
+// 破棄してGistから読み込む
+document.getElementById('btn-sync-discard').addEventListener('click', async () => {
+  document.getElementById('sync-modal').classList.remove('open');
+  localStorage.removeItem('gm_offline_draft');
+  offlineEdited = false;
+  setStatus('再読み込み中…');
+  try {
+    const data = await apiGet();
+    loadFromGist(data);
+    toast('Gistから再読み込みしました');
+  } catch(e) {
+    toast('読み込みに失敗しました', true);
+  }
+});
+
+// オフライン中の編集をlocalStorageに保存
+function saveOfflineDraft() {
+  if (!isOffline) return;
+  offlineEdited = true;
+  const draft = {
+    memos: deepClone(memos),
+    knownFiles: [...knownFiles],
+    backupKeys: [...backupKeys],
+    savedAt: new Date().toISOString()
+  };
+  localStorage.setItem('gm_offline_draft', JSON.stringify(draft));
+}
+
+// 初期化時にオフライン状態を反映
+window.addEventListener('DOMContentLoaded', () => {
+  updateOfflineBanner();
 });
 </script>
 </body>
