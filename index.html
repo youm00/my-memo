@@ -8,22 +8,20 @@
 <link rel="manifest" href="manifest.json">
 
 <style>
+:root{
+  --bg:#f5f2eb;
+  --paper:#fdfcf8;
+  --ink:#1a1814;
+  --border:#dedad2;
+  --accent:#c8441a;
+}
+
 body{
   margin:0;
   font-family:'DM Sans',sans-serif;
-  background:#f5f2eb;
-}
-
-/* ===== トップバー ===== */
-#topbar{
-  background:#fdfcf8;
-  padding:0.8rem 1rem;
-  border-bottom:1px solid #dedad2;
-  display:flex;
-  align-items:center;
-  gap:1rem;
-  position:relative;
-  z-index:10;
+  background:var(--bg);
+  color:var(--ink);
+  overflow:hidden;
 }
 
 /* ===== オフラインバナー ===== */
@@ -37,48 +35,69 @@ body{
   background:#e8a020;
   color:white;
   text-align:center;
-  font-size:0.75rem;
   padding:0.45rem;
+  font-size:0.75rem;
   letter-spacing:0.04em;
 }
 #offline-banner.show{
   display:block;
 }
 
-/* 簡易レイアウト */
+/* ===== トップバー ===== */
+#topbar{
+  display:flex;
+  align-items:center;
+  gap:1rem;
+  padding:0.8rem 1.2rem;
+  background:var(--paper);
+  border-bottom:1px solid var(--border);
+}
+
+/* ===== レイアウト ===== */
 #main{
   display:flex;
-  height:calc(100vh - 50px);
+  height:calc(100vh - 55px);
 }
+
 #memo-list{
-  width:220px;
-  border-right:1px solid #dedad2;
-  overflow:auto;
-  background:#fdfcf8;
+  width:260px;
+  background:var(--paper);
+  border-right:1px solid var(--border);
+  overflow-y:auto;
 }
+
 .memo-item{
-  padding:0.7rem;
-  border-bottom:1px solid #eee;
+  padding:0.7rem 1rem;
+  border-bottom:1px solid var(--border);
   cursor:pointer;
 }
 .memo-item:hover{
-  background:#f0ede6;
+  background:var(--bg);
 }
+
 #editor{
   flex:1;
   display:flex;
   flex-direction:column;
 }
+
 #memo-body{
   flex:1;
-  padding:1rem;
   border:none;
   outline:none;
-  font-family:monospace;
+  padding:1.2rem;
+  font-family:'DM Mono',monospace;
+  font-size:0.9rem;
+  background:var(--paper);
 }
-button{
-  margin:0.5rem;
-  padding:0.5rem 1rem;
+
+#save-btn{
+  background:var(--accent);
+  color:white;
+  border:none;
+  padding:0.6rem 1.2rem;
+  margin:1rem;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -94,13 +113,14 @@ button{
 
 <div id="main">
   <div id="memo-list"></div>
+
   <div id="editor">
     <textarea id="memo-body"></textarea>
-    <button onclick="save()">保存</button>
+    <button id="save-btn">保存</button>
   </div>
 </div>
 
-<div id="overlay">
+<div id="overlay" style="display:none;">
   <input id="inp-token" placeholder="GitHub Token">
   <input id="inp-gist" placeholder="Gist ID">
   <button id="btn-connect">接続</button>
@@ -115,7 +135,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-/* ===== State ===== */
+/* ===== 状態 ===== */
 let token='', gistId='', memos=[], currentId=null;
 
 /* ===== 初期化 ===== */
@@ -127,7 +147,6 @@ window.addEventListener('DOMContentLoaded', () => {
   gistId = localStorage.getItem('gm_gist_id');
 
   const cached = localStorage.getItem('gm_cached_memos');
-
   if (cached) {
     memos = JSON.parse(cached);
     renderList();
@@ -139,27 +158,30 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-/* ===== オフラインバナー制御 ===== */
-function updateOfflineBanner(){
-  const banner=document.getElementById('offline-banner');
-  const topbar=document.getElementById('topbar');
+/* ===== オフライン検知（Android完全対応版） ===== */
+function updateOfflineBanner() {
+  const banner = document.getElementById('offline-banner');
+  const topbar = document.getElementById('topbar');
 
-  if(!navigator.onLine){
+  const offline = !navigator.onLine;
+
+  if (offline) {
     banner.classList.add('show');
-    topbar.style.marginTop=banner.offsetHeight+'px';
-  }else{
+    topbar.style.marginTop = banner.offsetHeight + 'px';
+  } else {
     banner.classList.remove('show');
-    topbar.style.marginTop='';
+    topbar.style.marginTop = '';
   }
 }
 
-window.addEventListener('offline',updateOfflineBanner);
-window.addEventListener('online',updateOfflineBanner);
+window.addEventListener('offline', updateOfflineBanner);
+window.addEventListener('online', updateOfflineBanner);
+setInterval(updateOfflineBanner, 2000);
 
 /* ===== 接続 ===== */
 document.getElementById('btn-connect').addEventListener('click',()=>connect(true));
 
-async function connect(showToast=true){
+async function connect(){
 
   token=document.getElementById('inp-token').value.trim();
   gistId=document.getElementById('inp-gist').value.trim();
@@ -205,6 +227,8 @@ function loadFromGist(data){
 }
 
 /* ===== 保存 ===== */
+document.getElementById('save-btn').addEventListener('click',save);
+
 async function save(){
 
   if(!currentId)return;
