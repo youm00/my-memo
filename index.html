@@ -263,10 +263,25 @@ function saveOfflineDraft() {
   localStorage.setItem('gm_offline_draft', JSON.stringify(draft));
 }
 
-// 初期化時にオフライン状態を反映
-window.addEventListener('DOMContentLoaded', () => {
+// 初期化時にオフライン状態を反映（即時 + 定期チェック）
+function checkOnlineStatus() {
+  const wasOffline = isOffline;
+  isOffline = !navigator.onLine;
+  if (wasOffline !== isOffline) {
+    updateOfflineBanner();
+  }
+}
+
+// ページ読み込み直後に即チェック
+document.addEventListener('DOMContentLoaded', () => {
   updateOfflineBanner();
 });
+
+// 500ms後にも再チェック（SW経由での表示時に確実に反映させる）
+setTimeout(updateOfflineBanner, 500);
+
+// 2秒ごとに定期チェック（onlineイベントが発火しない場合の保険）
+setInterval(checkOnlineStatus, 2000);
 </script>
 </head>
 <body>
@@ -1116,10 +1131,8 @@ function saveOfflineDraft() {
   localStorage.setItem('gm_offline_draft', JSON.stringify(draft));
 }
 
-// 初期化時にオフライン状態を反映
-window.addEventListener('DOMContentLoaded', () => {
-  updateOfflineBanner();
-});
+// 初期化時にオフライン状態を反映（即時 + 定期チェック）
+
 </script>
 </body>
 </html>
