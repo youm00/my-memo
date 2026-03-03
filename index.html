@@ -1,279 +1,204 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Gist Memo</title>
-
-<link rel="manifest" href="manifest.json">
-
-<style>
-:root{
-  --bg:#f5f2eb;
-  --paper:#fdfcf8;
-  --ink:#1a1814;
-  --border:#dedad2;
-  --accent:#c8441a;
-}
-
-body{
-  margin:0;
-  font-family:'DM Sans',sans-serif;
-  background:var(--bg);
-  color:var(--ink);
-  overflow:hidden;
-}
-
-/* ===== オフラインバナー ===== */
-#offline-banner{
-  display:none;
-  position:fixed;
-  top:0;
-  left:0;
-  right:0;
-  z-index:9999;
-  background:#e8a020;
-  color:white;
-  text-align:center;
-  padding:0.45rem;
-  font-size:0.75rem;
-  letter-spacing:0.04em;
-}
-#offline-banner.show{
-  display:block;
-}
-
-/* ===== トップバー ===== */
-#topbar{
-  display:flex;
-  align-items:center;
-  gap:1rem;
-  padding:0.8rem 1.2rem;
-  background:var(--paper);
-  border-bottom:1px solid var(--border);
-}
-
-/* ===== レイアウト ===== */
-#main{
-  display:flex;
-  height:calc(100vh - 55px);
-}
-
-#memo-list{
-  width:260px;
-  background:var(--paper);
-  border-right:1px solid var(--border);
-  overflow-y:auto;
-}
-
-.memo-item{
-  padding:0.7rem 1rem;
-  border-bottom:1px solid var(--border);
-  cursor:pointer;
-}
-.memo-item:hover{
-  background:var(--bg);
-}
-
-#editor{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-}
-
-#memo-body{
-  flex:1;
-  border:none;
-  outline:none;
-  padding:1.2rem;
-  font-family:'DM Mono',monospace;
-  font-size:0.9rem;
-  background:var(--paper);
-}
-
-#save-btn{
-  background:var(--accent);
-  color:white;
-  border:none;
-  padding:0.6rem 1.2rem;
-  margin:1rem;
-  cursor:pointer;
-}
-</style>
-</head>
-
-<body>
-
-<div id="offline-banner">📡 オフライン中</div>
-
-<div id="topbar">
-  <h1>gist.memo</h1>
-  <span id="status-badge">—</span>
-</div>
-
-<div id="main">
-  <div id="memo-list"></div>
-
-  <div id="editor">
-    <textarea id="memo-body"></textarea>
-    <button id="save-btn">保存</button>
-  </div>
-</div>
-
-<div id="overlay" style="display:none;">
-  <input id="inp-token" placeholder="GitHub Token">
-  <input id="inp-gist" placeholder="Gist ID">
-  <button id="btn-connect">接続</button>
-</div>
-
 <script>
-
-/* ===== Service Worker ===== */
+/* ===============================
+   PWA / Service Worker
+================================= */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js');
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('SW registered'))
+      .catch(e => console.warn('SW error:', e));
   });
 }
 
-/* ===== 状態 ===== */
-let token='', gistId='', memos=[], currentId=null;
+/* ===============================
+   State
+================================= */
+let token='', gistId='', memos=[], currentId=null, savedSnapshot=null;
+let autosaveTimer=null, autosaveEnabled=false, pendingChanges=false;
+let activeTagFilter=null;
+let backupKeys = [];
+let knownFiles = new Set();
+let isOffline = !navigator.onLine;
 
-/* ===== 初期化 ===== */
+/* ===============================
+   初期化
+================================= */
 window.addEventListener('DOMContentLoaded', () => {
-
-  updateOfflineBanner();
 
   token  = localStorage.getItem('gm_token');
   gistId = localStorage.getItem('gm_gist_id');
+  autosaveEnabled = localStorage.getItem('gm_autosave') === 'true';
 
+  document.getElementById('autosave-toggle').checked = autosaveEnabled;
+
+  // ★ オフライン単独起動対応
   const cached = localStorage.getItem('gm_cached_memos');
-  if (cached) {
+  if ((!token || !gistId) && cached) {
     memos = JSON.parse(cached);
+    savedSnapshot = JSON.parse(cached);
+    renderTagFilterBar();
     renderList();
     if (memos.length > 0) selectMemo(memos[0].id);
+    setStatus('オフライン表示');
+    document.getElementById('overlay').style.display = 'none';
+    return;
   }
 
   if (token && gistId) {
+    document.getElementById('inp-token').value = token;
+    document.getElementById('inp-gist').value  = gistId;
     connect(false);
   }
 });
 
-/* ===== オフライン検知（Android完全対応版） ===== */
-function updateOfflineBanner() {
-  const banner = document.getElementById('offline-banner');
-  const topbar = document.getElementById('topbar');
+/* ===============================
+   接続
+================================= */
+document.getElementById('btn-connect').addEventListener('click', () => connect(true));
 
-  const offline = !navigator.onLine;
+async function connect(showFeedback=true) {
 
-  if (offline) {
-    banner.classList.add('show');
-    topbar.style.marginTop = banner.offsetHeight + 'px';
-  } else {
-    banner.classList.remove('show');
-    topbar.style.marginTop = '';
-  }
-}
+  token  = document.getElementById('inp-token').value.trim();
+  gistId = document.getElementById('inp-gist').value.trim();
 
-window.addEventListener('offline', updateOfflineBanner);
-window.addEventListener('online', updateOfflineBanner);
-setInterval(updateOfflineBanner, 2000);
-
-/* ===== 接続 ===== */
-document.getElementById('btn-connect').addEventListener('click',()=>connect(true));
-
-async function connect(){
-
-  token=document.getElementById('inp-token').value.trim();
-  gistId=document.getElementById('inp-gist').value.trim();
-
-  if(!token||!gistId)return;
-
-  try{
-    const res=await fetch('https://api.github.com/gists/'+gistId,{
-      headers:{Authorization:'token '+token}
-    });
-    if(!res.ok)throw new Error();
-
-    const data=await res.json();
-
-    localStorage.setItem('gm_token',token);
-    localStorage.setItem('gm_gist_id',gistId);
-
-    loadFromGist(data);
-    document.getElementById('overlay').style.display='none';
-
-  }catch(e){
-    const cached=localStorage.getItem('gm_cached_memos');
-    if(cached){
-      memos=JSON.parse(cached);
-      renderList();
-      if(memos.length>0)selectMemo(memos[0].id);
-      document.getElementById('overlay').style.display='none';
-    }
-  }
-}
-
-/* ===== Gist読込 ===== */
-function loadFromGist(data){
-  memos=[];
-  for(const fname in data.files){
-    if(!fname.startsWith('memo_'))continue;
-    const id=fname.replace('memo_','').replace('.json','');
-    const m=JSON.parse(data.files[fname].content);
-    memos.push({id,...m});
-  }
-  renderList();
-  localStorage.setItem('gm_cached_memos',JSON.stringify(memos));
-}
-
-/* ===== 保存 ===== */
-document.getElementById('save-btn').addEventListener('click',save);
-
-async function save(){
-
-  if(!currentId)return;
-
-  if(!navigator.onLine){
-    localStorage.setItem('gm_cached_memos',JSON.stringify(memos));
+  if (!token || !gistId) {
+    if(showFeedback) toast('TokenとGist IDを入力してください',true);
     return;
   }
 
-  const files={};
-  memos.forEach(m=>{
-    files['memo_'+m.id+'.json']={content:JSON.stringify(m)};
-  });
+  try {
+    const data = await apiGet();
 
-  await fetch('https://api.github.com/gists/'+gistId,{
+    localStorage.setItem('gm_token', token);
+    localStorage.setItem('gm_gist_id', gistId);
+
+    loadFromGist(data);
+
+    document.getElementById('overlay').style.display = 'none';
+    setStatus('接続済み');
+    if(showFeedback) toast('接続しました');
+
+  } catch(e) {
+
+    // ★ オフライン復元
+    const cached = localStorage.getItem('gm_cached_memos');
+    if (cached) {
+      memos = JSON.parse(cached);
+      savedSnapshot = JSON.parse(cached);
+      renderTagFilterBar();
+      renderList();
+      if (memos.length > 0) selectMemo(memos[0].id);
+      document.getElementById('overlay').style.display = 'none';
+      setStatus('オフライン表示');
+      toast('オフラインモードで起動しました');
+      return;
+    }
+
+    setStatus('接続失敗');
+    toast('接続失敗：Token または Gist ID を確認してください', true);
+  }
+}
+
+/* ===============================
+   Gist読み込み
+================================= */
+function loadFromGist(data) {
+
+  const files = data.files;
+  const loaded = [];
+
+  for (const fname of Object.keys(files)) {
+    if (!fname.startsWith('memo_') || !fname.endsWith('.json')) continue;
+    try {
+      const m = JSON.parse(files[fname].content);
+      const id = fname.replace('memo_','').replace('.json','');
+      loaded.push({ id, ...m });
+    } catch(e){}
+  }
+
+  loaded.sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+
+  memos = loaded;
+  savedSnapshot = JSON.parse(JSON.stringify(memos));
+
+  renderTagFilterBar();
+  renderList();
+
+  if (memos.length > 0) selectMemo(memos[0].id);
+
+  // ★ 常時ローカルキャッシュ保存（超重要）
+  localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
+}
+
+/* ===============================
+   保存（オフライン完全対応）
+================================= */
+async function save(silent=false) {
+
+  if (!currentId) return;
+
+  const m = memos.find(x=>x.id===currentId);
+  if (!m) return;
+
+  m.updatedAt = new Date().toISOString();
+
+  // ★ オフライン保存
+  if (!navigator.onLine) {
+    localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
+    setStatus('ローカル保存済み');
+    if(!silent) toast('オフライン保存しました');
+    renderList();
+    return;
+  }
+
+  try {
+    await apiPatch(buildPatch());
+    savedSnapshot = JSON.parse(JSON.stringify(memos));
+    setStatus('保存済み');
+    if(!silent) toast('保存しました ✓');
+
+    // ★ 保存成功後もローカル更新
+    localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
+
+  } catch(e) {
+    setStatus('保存失敗');
+    if(!silent) toast('保存に失敗しました', true);
+  }
+}
+
+/* ===============================
+   API
+================================= */
+async function apiGet() {
+  const res = await fetch('https://api.github.com/gists/'+gistId,{
+    headers:{ Authorization:'token '+token }
+  });
+  if(!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
+async function apiPatch(files) {
+  const res = await fetch('https://api.github.com/gists/'+gistId,{
     method:'PATCH',
     headers:{
       Authorization:'token '+token,
       'Content-Type':'application/json'
     },
-    body:JSON.stringify({files})
+    body: JSON.stringify({files})
   });
-
-  localStorage.setItem('gm_cached_memos',JSON.stringify(memos));
+  if(!res.ok) throw new Error(res.status);
 }
 
-/* ===== UI ===== */
-function renderList(){
-  const list=document.getElementById('memo-list');
-  list.innerHTML='';
-  memos.forEach(m=>{
-    const el=document.createElement('div');
-    el.className='memo-item';
-    el.textContent=m.title||'無題';
-    el.onclick=()=>selectMemo(m.id);
-    list.appendChild(el);
-  });
+/* ===============================
+   オフライン表示
+================================= */
+function updateOfflineBanner() {
+  const banner = document.getElementById('offline-banner');
+  if (!banner) return;
+  banner.classList.toggle('show', !navigator.onLine);
 }
 
-function selectMemo(id){
-  currentId=id;
-  const m=memos.find(x=>x.id===id);
-  document.getElementById('memo-body').value=m.body||'';
-}
+window.addEventListener('offline', updateOfflineBanner);
+window.addEventListener('online', updateOfflineBanner);
 
 </script>
-</body>
-</html>
