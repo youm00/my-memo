@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Gist Memo</title>
 
 <link rel="manifest" href="manifest.json">
@@ -11,57 +11,68 @@
 :root{
   --bg:#f5f2eb;
   --paper:#fdfcf8;
+  --ink:#1a1814;
   --border:#dedad2;
   --accent:#c8441a;
 }
 
 body{
   margin:0;
-  font-family:sans-serif;
+  font-family:'DM Sans',sans-serif;
   background:var(--bg);
-  color:#222;
+  color:var(--ink);
+  overflow:hidden;
 }
 
+/* ===== オフラインバナー ===== */
 #offline-banner{
   display:none;
   position:fixed;
   top:0;
   left:0;
   right:0;
-  background:#e8a020;
-  color:#fff;
-  text-align:center;
-  padding:6px;
-  font-size:12px;
   z-index:9999;
+  background:#e8a020;
+  color:white;
+  text-align:center;
+  padding:0.45rem;
+  font-size:0.75rem;
+  letter-spacing:0.04em;
 }
 #offline-banner.show{
   display:block;
 }
 
+/* ===== トップバー ===== */
 #topbar{
-  padding:12px;
+  display:flex;
+  align-items:center;
+  gap:1rem;
+  padding:0.8rem 1.2rem;
   background:var(--paper);
   border-bottom:1px solid var(--border);
-  font-weight:bold;
 }
 
+/* ===== レイアウト ===== */
 #main{
   display:flex;
-  height:calc(100vh - 50px);
+  height:calc(100vh - 55px);
 }
 
 #memo-list{
-  width:220px;
-  border-right:1px solid var(--border);
+  width:260px;
   background:var(--paper);
-  overflow:auto;
+  border-right:1px solid var(--border);
+  overflow-y:auto;
 }
 
 .memo-item{
-  padding:10px;
+  padding:0.7rem 1rem;
   border-bottom:1px solid var(--border);
   cursor:pointer;
+}
+.memo-item:hover{
+  background:var(--bg);
 }
 
 #editor{
@@ -74,16 +85,19 @@ body{
   flex:1;
   border:none;
   outline:none;
-  padding:12px;
-  font-family:monospace;
+  padding:1.2rem;
+  font-family:'DM Mono',monospace;
+  font-size:0.9rem;
+  background:var(--paper);
 }
 
 #save-btn{
-  margin:12px;
-  padding:8px;
   background:var(--accent);
   color:white;
   border:none;
+  padding:0.6rem 1.2rem;
+  margin:1rem;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -92,104 +106,174 @@ body{
 
 <div id="offline-banner">📡 オフライン中</div>
 
-<div id="topbar">gist.memo</div>
+<div id="topbar">
+  <h1>gist.memo</h1>
+  <span id="status-badge">—</span>
+</div>
 
 <div id="main">
   <div id="memo-list"></div>
+
   <div id="editor">
     <textarea id="memo-body"></textarea>
     <button id="save-btn">保存</button>
   </div>
 </div>
 
+<div id="overlay" style="display:none;">
+  <input id="inp-token" placeholder="GitHub Token">
+  <input id="inp-gist" placeholder="Gist ID">
+  <button id="btn-connect">接続</button>
+</div>
+
 <script>
 
-/* ===========================
-   Service Worker 登録
-=========================== */
+/* ===== Service Worker ===== */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .catch(err => console.log('SW error:', err));
+    navigator.serviceWorker.register('./sw.js');
   });
 }
 
-/* ===========================
-   オフラインバナー安全版
-=========================== */
+/* ===== 状態 ===== */
+let token='', gistId='', memos=[], currentId=null;
+
+/* ===== 初期化 ===== */
+window.addEventListener('DOMContentLoaded', () => {
+
+  updateOfflineBanner();
+
+  token  = localStorage.getItem('gm_token');
+  gistId = localStorage.getItem('gm_gist_id');
+
+  const cached = localStorage.getItem('gm_cached_memos');
+  if (cached) {
+    memos = JSON.parse(cached);
+    renderList();
+    if (memos.length > 0) selectMemo(memos[0].id);
+  }
+
+  if (token && gistId) {
+    connect(false);
+  }
+});
+
+/* ===== オフライン検知（Android完全対応版） ===== */
 function updateOfflineBanner() {
-  try {
-    const banner = document.getElementById('offline-banner');
-    if (!banner) return;
+  const banner = document.getElementById('offline-banner');
+  const topbar = document.getElementById('topbar');
 
-    const isOffline = !navigator.onLine;
+  const offline = !navigator.onLine;
 
-    if (isOffline) {
-      banner.classList.add('show');
-    } else {
-      banner.classList.remove('show');
-    }
-  } catch(e){
-    console.log('offline check error', e);
+  if (offline) {
+    banner.classList.add('show');
+    topbar.style.marginTop = banner.offsetHeight + 'px';
+  } else {
+    banner.classList.remove('show');
+    topbar.style.marginTop = '';
   }
 }
 
-window.addEventListener('online', updateOfflineBanner);
 window.addEventListener('offline', updateOfflineBanner);
+window.addEventListener('online', updateOfflineBanner);
+setInterval(updateOfflineBanner, 2000);
 
-document.addEventListener('DOMContentLoaded', () => {
-  updateOfflineBanner();
-});
+/* ===== 接続 ===== */
+document.getElementById('btn-connect').addEventListener('click',()=>connect(true));
 
-/* ===========================
-   メモローカル保存
-=========================== */
+async function connect(){
 
-let memos = [];
-let currentId = null;
+  token=document.getElementById('inp-token').value.trim();
+  gistId=document.getElementById('inp-gist').value.trim();
 
-function renderList(){
-  const list = document.getElementById('memo-list');
-  if(!list) return;
-  list.innerHTML = '';
+  if(!token||!gistId)return;
 
+  try{
+    const res=await fetch('https://api.github.com/gists/'+gistId,{
+      headers:{Authorization:'token '+token}
+    });
+    if(!res.ok)throw new Error();
+
+    const data=await res.json();
+
+    localStorage.setItem('gm_token',token);
+    localStorage.setItem('gm_gist_id',gistId);
+
+    loadFromGist(data);
+    document.getElementById('overlay').style.display='none';
+
+  }catch(e){
+    const cached=localStorage.getItem('gm_cached_memos');
+    if(cached){
+      memos=JSON.parse(cached);
+      renderList();
+      if(memos.length>0)selectMemo(memos[0].id);
+      document.getElementById('overlay').style.display='none';
+    }
+  }
+}
+
+/* ===== Gist読込 ===== */
+function loadFromGist(data){
+  memos=[];
+  for(const fname in data.files){
+    if(!fname.startsWith('memo_'))continue;
+    const id=fname.replace('memo_','').replace('.json','');
+    const m=JSON.parse(data.files[fname].content);
+    memos.push({id,...m});
+  }
+  renderList();
+  localStorage.setItem('gm_cached_memos',JSON.stringify(memos));
+}
+
+/* ===== 保存 ===== */
+document.getElementById('save-btn').addEventListener('click',save);
+
+async function save(){
+
+  if(!currentId)return;
+
+  if(!navigator.onLine){
+    localStorage.setItem('gm_cached_memos',JSON.stringify(memos));
+    return;
+  }
+
+  const files={};
   memos.forEach(m=>{
-    const el = document.createElement('div');
-    el.className = 'memo-item';
-    el.textContent = m.title || '無題';
-    el.onclick = ()=>selectMemo(m.id);
+    files['memo_'+m.id+'.json']={content:JSON.stringify(m)};
+  });
+
+  await fetch('https://api.github.com/gists/'+gistId,{
+    method:'PATCH',
+    headers:{
+      Authorization:'token '+token,
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify({files})
+  });
+
+  localStorage.setItem('gm_cached_memos',JSON.stringify(memos));
+}
+
+/* ===== UI ===== */
+function renderList(){
+  const list=document.getElementById('memo-list');
+  list.innerHTML='';
+  memos.forEach(m=>{
+    const el=document.createElement('div');
+    el.className='memo-item';
+    el.textContent=m.title||'無題';
+    el.onclick=()=>selectMemo(m.id);
     list.appendChild(el);
   });
 }
 
 function selectMemo(id){
-  currentId = id;
-  const m = memos.find(x=>x.id===id);
-  const area = document.getElementById('memo-body');
-  if(area && m){
-    area.value = m.body || '';
-  }
+  currentId=id;
+  const m=memos.find(x=>x.id===id);
+  document.getElementById('memo-body').value=m.body||'';
 }
-
-function save(){
-  if(!currentId) return;
-  localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
-}
-
-document.getElementById('save-btn').addEventListener('click', save);
-
-document.addEventListener('DOMContentLoaded', ()=>{
-  const cached = localStorage.getItem('gm_cached_memos');
-  if(cached){
-    try{
-      memos = JSON.parse(cached);
-      renderList();
-      if(memos.length) selectMemo(memos[0].id);
-    }catch(e){}
-  }
-});
 
 </script>
-
 </body>
 </html>
