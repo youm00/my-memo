@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gist Memo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>gist.memo</title>
 
 <style>
 :root{
@@ -11,106 +11,200 @@
   --paper:#fdfcf8;
   --border:#dedad2;
   --accent:#c8441a;
+  --muted:#777;
+  --warn:#e8a020;
 }
+
+*{ box-sizing:border-box; }
 
 body{
   margin:0;
-  font-family:sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
   background:var(--bg);
   color:#222;
 }
 
+#offline-banner{
+  display:none;
+  position:sticky;
+  top:0;
+  z-index:10;
+  background:var(--warn);
+  color:#fff;
+  text-align:center;
+  padding:6px 10px;
+  font-size:12px;
+  letter-spacing:.04em;
+}
+#offline-banner.show{ display:block; }
+
 #topbar{
-  padding:12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px 14px;
   background:var(--paper);
   border-bottom:1px solid var(--border);
-  font-weight:bold;
 }
+#title{ font-weight:700; }
+#status{ font-size:12px; color:var(--muted); }
 
 #main{
   display:flex;
-  height:calc(100vh - 50px);
+  height:calc(100vh - 92px);
 }
 
 #memo-list{
-  width:220px;
-  border-right:1px solid var(--border);
+  width:260px;
   background:var(--paper);
+  border-right:1px solid var(--border);
   overflow:auto;
 }
-
 .memo-item{
-  padding:10px;
+  padding:10px 12px;
   border-bottom:1px solid var(--border);
   cursor:pointer;
 }
+.memo-item:hover{ background:#f0ede6; }
+.memo-item.active{ background:#efe9de; }
 
 #editor{
   flex:1;
   display:flex;
   flex-direction:column;
+  min-width:0;
+}
+
+#memo-title{
+  border:none;
+  outline:none;
+  padding:12px 14px 6px 14px;
+  font-size:16px;
+  font-weight:600;
+  background:var(--paper);
+  border-bottom:1px solid var(--border);
 }
 
 #memo-body{
   flex:1;
   border:none;
   outline:none;
-  padding:12px;
-  font-family:monospace;
+  padding:14px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:14px;
+  background:var(--paper);
+  resize:none;
 }
 
-#save-btn{
-  margin:12px;
-  padding:8px;
+#toolbar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 14px;
+  border-top:1px solid var(--border);
+  background:var(--paper);
+}
+
+button{
+  padding:6px 12px;
+  border:1px solid var(--border);
+  background:#fff;
+  cursor:pointer;
+}
+button.primary{
   background:var(--accent);
-  color:white;
-  border:none;
+  color:#fff;
+  border-color:var(--accent);
+}
+
+#overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+#overlay .card{
+  width:min(92vw,420px);
+  background:#fff;
+  padding:16px;
+  border-radius:8px;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);
+}
+#overlay input{
+  width:100%;
+  margin:6px 0 10px;
+  padding:8px;
+}
+
+@media (max-width: 768px){
+  #main{ flex-direction:column; height:auto; }
+  #memo-list{ width:100%; height:160px; }
+  #editor{ height:calc(100vh - 252px); }
 }
 </style>
 </head>
-
 <body>
 
-<div id="topbar">gist.memo</div>
+<div id="offline-banner">📡 オフライン中</div>
+
+<div id="topbar">
+  <div id="title">gist.memo</div>
+  <div id="status">未接続</div>
+</div>
 
 <div id="main">
   <div id="memo-list"></div>
+
   <div id="editor">
-    <textarea id="memo-body"></textarea>
-    <button id="save-btn">保存</button>
+    <input id="memo-title" placeholder="タイトル">
+    <textarea id="memo-body" placeholder="本文"></textarea>
+    <div id="toolbar">
+      <button id="btn-new">新規</button>
+      <button id="btn-save" class="primary">保存</button>
+    </div>
+  </div>
+</div>
+
+<div id="overlay" style="display:none;">
+  <div class="card">
+    <div style="font-weight:600;margin-bottom:8px;">Gist 接続</div>
+    <input id="inp-token" placeholder="GitHub Personal Access Token">
+    <input id="inp-gist" placeholder="Gist ID">
+    <button id="btn-connect" class="primary">接続</button>
   </div>
 </div>
 
 <script>
-let memos = [];
-let currentId = null;
+/* ===============================
+   State
+================================= */
+let token='', gistId='';
+let memos=[];
+let currentId=null;
 
-function renderList(){
-  const list = document.getElementById('memo-list');
-  list.innerHTML = '';
+/* ===============================
+   初期化
+================================= */
+document.addEventListener('DOMContentLoaded', () => {
 
-  memos.forEach(m=>{
-    const el = document.createElement('div');
-    el.className = 'memo-item';
-    el.textContent = m.title || '無題';
-    el.onclick = ()=>selectMemo(m.id);
-    list.appendChild(el);
-  });
-}
+  // オフライン表示 初期反映
+  updateOfflineBanner();
 
-function selectMemo(id){
-  currentId = id;
-  const m = memos.find(x=>x.id===id);
-  document.getElementById('memo-body').value = m.body || '';
-}
+  token  = localStorage.getItem('gm_token') || '';
+  gistId = localStorage.getItem('gm_gist_id') || '';
 
-function save(){
-  localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
-}
+  if(!token || !gistId){
+    showOverlay(true);
+  }else{
+    document.getElementById('inp-token').value = token;
+    document.getElementById('inp-gist').value  = gistId;
+    connect(false);
+  }
 
-document.getElementById('save-btn').addEventListener('click', save);
-
-document.addEventListener('DOMContentLoaded', ()=>{
+  // ローカルキャッシュ復元
   const cached = localStorage.getItem('gm_cached_memos');
   if(cached){
     try{
@@ -120,6 +214,170 @@ document.addEventListener('DOMContentLoaded', ()=>{
     }catch(e){}
   }
 });
+
+/* ===============================
+   オフラインバナー
+================================= */
+function updateOfflineBanner(){
+  const banner = document.getElementById('offline-banner');
+  if(!banner) return;
+  banner.classList.toggle('show', !navigator.onLine);
+}
+window.addEventListener('online', updateOfflineBanner);
+window.addEventListener('offline', updateOfflineBanner);
+
+/* ===============================
+   UI
+================================= */
+function setStatus(text){
+  document.getElementById('status').textContent = text;
+}
+
+function showOverlay(show){
+  document.getElementById('overlay').style.display = show ? 'flex' : 'none';
+}
+
+function renderList(){
+  const list = document.getElementById('memo-list');
+  list.innerHTML='';
+  memos.forEach(m=>{
+    const el=document.createElement('div');
+    el.className='memo-item' + (m.id===currentId?' active':'');
+    el.textContent=m.title || '無題';
+    el.onclick=()=>selectMemo(m.id);
+    list.appendChild(el);
+  });
+}
+
+function selectMemo(id){
+  currentId=id;
+  const m=memos.find(x=>x.id===id);
+  if(!m) return;
+  document.getElementById('memo-title').value = m.title || '';
+  document.getElementById('memo-body').value  = m.body  || '';
+  renderList();
+}
+
+/* ===============================
+   メモ操作
+================================= */
+document.getElementById('btn-new').addEventListener('click', ()=>{
+  const id = Date.now().toString();
+  memos.unshift({ id, title:'', body:'', updatedAt:new Date().toISOString() });
+  selectMemo(id);
+});
+
+document.getElementById('btn-save').addEventListener('click', save);
+
+async function save(){
+
+  if(!currentId) return;
+
+  const m=memos.find(x=>x.id===currentId);
+  if(!m) return;
+
+  m.title = document.getElementById('memo-title').value;
+  m.body  = document.getElementById('memo-body').value;
+  m.updatedAt = new Date().toISOString();
+
+  // オフライン保存
+  if(!navigator.onLine){
+    localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
+    setStatus('ローカル保存');
+    renderList();
+    return;
+  }
+
+  try{
+    await apiPatch(buildPatch());
+    localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
+    setStatus('保存済み');
+    renderList();
+  }catch(e){
+    setStatus('保存失敗');
+  }
+}
+
+/* ===============================
+   接続
+================================= */
+document.getElementById('btn-connect').addEventListener('click', ()=>connect(true));
+
+async function connect(showFeedback=true){
+
+  token  = document.getElementById('inp-token').value.trim();
+  gistId = document.getElementById('inp-gist').value.trim();
+
+  if(!token || !gistId) return;
+
+  try{
+    const data = await apiGet();
+
+    localStorage.setItem('gm_token', token);
+    localStorage.setItem('gm_gist_id', gistId);
+
+    loadFromGist(data);
+    showOverlay(false);
+    setStatus('接続済み');
+
+  }catch(e){
+    setStatus('接続失敗');
+  }
+}
+
+/* ===============================
+   Gist API
+================================= */
+async function apiGet(){
+  const res = await fetch('https://api.github.com/gists/'+gistId,{
+    headers:{ Authorization:'token '+token }
+  });
+  if(!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
+async function apiPatch(files){
+  const res = await fetch('https://api.github.com/gists/'+gistId,{
+    method:'PATCH',
+    headers:{
+      Authorization:'token '+token,
+      'Content-Type':'application/json'
+    },
+    body: JSON.stringify({files})
+  });
+  if(!res.ok) throw new Error(res.status);
+}
+
+function loadFromGist(data){
+  const loaded=[];
+  for(const fname of Object.keys(data.files)){
+    if(!fname.startsWith('memo_') || !fname.endsWith('.json')) continue;
+    try{
+      const m=JSON.parse(data.files[fname].content);
+      const id=fname.replace('memo_','').replace('.json','');
+      loaded.push({ id, ...m });
+    }catch(e){}
+  }
+  loaded.sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+  memos=loaded;
+  localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
+  renderList();
+  if(memos.length) selectMemo(memos[0].id);
+}
+
+function buildPatch(){
+  const files={};
+  memos.forEach(m=>{
+    files['memo_'+m.id+'.json']={
+      content: JSON.stringify({
+        title:m.title||'',
+        body:m.body||'',
+        updatedAt:m.updatedAt||''
+      },null,2)
+    };
+  });
+  return files;
+}
 </script>
 
 </body>
