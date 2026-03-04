@@ -1,204 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gist Memo</title>
+
+<style>
+:root{
+  --bg:#f5f2eb;
+  --paper:#fdfcf8;
+  --border:#dedad2;
+  --accent:#c8441a;
+}
+
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:var(--bg);
+  color:#222;
+}
+
+#topbar{
+  padding:12px;
+  background:var(--paper);
+  border-bottom:1px solid var(--border);
+  font-weight:bold;
+}
+
+#main{
+  display:flex;
+  height:calc(100vh - 50px);
+}
+
+#memo-list{
+  width:220px;
+  border-right:1px solid var(--border);
+  background:var(--paper);
+  overflow:auto;
+}
+
+.memo-item{
+  padding:10px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+}
+
+#editor{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+
+#memo-body{
+  flex:1;
+  border:none;
+  outline:none;
+  padding:12px;
+  font-family:monospace;
+}
+
+#save-btn{
+  margin:12px;
+  padding:8px;
+  background:var(--accent);
+  color:white;
+  border:none;
+}
+</style>
+</head>
+
+<body>
+
+<div id="topbar">gist.memo</div>
+
+<div id="main">
+  <div id="memo-list"></div>
+  <div id="editor">
+    <textarea id="memo-body"></textarea>
+    <button id="save-btn">保存</button>
+  </div>
+</div>
+
 <script>
-/* ===============================
-   PWA / Service Worker
-================================= */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(() => console.log('SW registered'))
-      .catch(e => console.warn('SW error:', e));
+let memos = [];
+let currentId = null;
+
+function renderList(){
+  const list = document.getElementById('memo-list');
+  list.innerHTML = '';
+
+  memos.forEach(m=>{
+    const el = document.createElement('div');
+    el.className = 'memo-item';
+    el.textContent = m.title || '無題';
+    el.onclick = ()=>selectMemo(m.id);
+    list.appendChild(el);
   });
 }
 
-/* ===============================
-   State
-================================= */
-let token='', gistId='', memos=[], currentId=null, savedSnapshot=null;
-let autosaveTimer=null, autosaveEnabled=false, pendingChanges=false;
-let activeTagFilter=null;
-let backupKeys = [];
-let knownFiles = new Set();
-let isOffline = !navigator.onLine;
-
-/* ===============================
-   初期化
-================================= */
-window.addEventListener('DOMContentLoaded', () => {
-
-  token  = localStorage.getItem('gm_token');
-  gistId = localStorage.getItem('gm_gist_id');
-  autosaveEnabled = localStorage.getItem('gm_autosave') === 'true';
-
-  document.getElementById('autosave-toggle').checked = autosaveEnabled;
-
-  // ★ オフライン単独起動対応
-  const cached = localStorage.getItem('gm_cached_memos');
-  if ((!token || !gistId) && cached) {
-    memos = JSON.parse(cached);
-    savedSnapshot = JSON.parse(cached);
-    renderTagFilterBar();
-    renderList();
-    if (memos.length > 0) selectMemo(memos[0].id);
-    setStatus('オフライン表示');
-    document.getElementById('overlay').style.display = 'none';
-    return;
-  }
-
-  if (token && gistId) {
-    document.getElementById('inp-token').value = token;
-    document.getElementById('inp-gist').value  = gistId;
-    connect(false);
-  }
-});
-
-/* ===============================
-   接続
-================================= */
-document.getElementById('btn-connect').addEventListener('click', () => connect(true));
-
-async function connect(showFeedback=true) {
-
-  token  = document.getElementById('inp-token').value.trim();
-  gistId = document.getElementById('inp-gist').value.trim();
-
-  if (!token || !gistId) {
-    if(showFeedback) toast('TokenとGist IDを入力してください',true);
-    return;
-  }
-
-  try {
-    const data = await apiGet();
-
-    localStorage.setItem('gm_token', token);
-    localStorage.setItem('gm_gist_id', gistId);
-
-    loadFromGist(data);
-
-    document.getElementById('overlay').style.display = 'none';
-    setStatus('接続済み');
-    if(showFeedback) toast('接続しました');
-
-  } catch(e) {
-
-    // ★ オフライン復元
-    const cached = localStorage.getItem('gm_cached_memos');
-    if (cached) {
-      memos = JSON.parse(cached);
-      savedSnapshot = JSON.parse(cached);
-      renderTagFilterBar();
-      renderList();
-      if (memos.length > 0) selectMemo(memos[0].id);
-      document.getElementById('overlay').style.display = 'none';
-      setStatus('オフライン表示');
-      toast('オフラインモードで起動しました');
-      return;
-    }
-
-    setStatus('接続失敗');
-    toast('接続失敗：Token または Gist ID を確認してください', true);
-  }
+function selectMemo(id){
+  currentId = id;
+  const m = memos.find(x=>x.id===id);
+  document.getElementById('memo-body').value = m.body || '';
 }
 
-/* ===============================
-   Gist読み込み
-================================= */
-function loadFromGist(data) {
-
-  const files = data.files;
-  const loaded = [];
-
-  for (const fname of Object.keys(files)) {
-    if (!fname.startsWith('memo_') || !fname.endsWith('.json')) continue;
-    try {
-      const m = JSON.parse(files[fname].content);
-      const id = fname.replace('memo_','').replace('.json','');
-      loaded.push({ id, ...m });
-    } catch(e){}
-  }
-
-  loaded.sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
-
-  memos = loaded;
-  savedSnapshot = JSON.parse(JSON.stringify(memos));
-
-  renderTagFilterBar();
-  renderList();
-
-  if (memos.length > 0) selectMemo(memos[0].id);
-
-  // ★ 常時ローカルキャッシュ保存（超重要）
+function save(){
   localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
 }
 
-/* ===============================
-   保存（オフライン完全対応）
-================================= */
-async function save(silent=false) {
+document.getElementById('save-btn').addEventListener('click', save);
 
-  if (!currentId) return;
-
-  const m = memos.find(x=>x.id===currentId);
-  if (!m) return;
-
-  m.updatedAt = new Date().toISOString();
-
-  // ★ オフライン保存
-  if (!navigator.onLine) {
-    localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
-    setStatus('ローカル保存済み');
-    if(!silent) toast('オフライン保存しました');
-    renderList();
-    return;
+document.addEventListener('DOMContentLoaded', ()=>{
+  const cached = localStorage.getItem('gm_cached_memos');
+  if(cached){
+    try{
+      memos = JSON.parse(cached);
+      renderList();
+      if(memos.length) selectMemo(memos[0].id);
+    }catch(e){}
   }
-
-  try {
-    await apiPatch(buildPatch());
-    savedSnapshot = JSON.parse(JSON.stringify(memos));
-    setStatus('保存済み');
-    if(!silent) toast('保存しました ✓');
-
-    // ★ 保存成功後もローカル更新
-    localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
-
-  } catch(e) {
-    setStatus('保存失敗');
-    if(!silent) toast('保存に失敗しました', true);
-  }
-}
-
-/* ===============================
-   API
-================================= */
-async function apiGet() {
-  const res = await fetch('https://api.github.com/gists/'+gistId,{
-    headers:{ Authorization:'token '+token }
-  });
-  if(!res.ok) throw new Error(res.status);
-  return res.json();
-}
-
-async function apiPatch(files) {
-  const res = await fetch('https://api.github.com/gists/'+gistId,{
-    method:'PATCH',
-    headers:{
-      Authorization:'token '+token,
-      'Content-Type':'application/json'
-    },
-    body: JSON.stringify({files})
-  });
-  if(!res.ok) throw new Error(res.status);
-}
-
-/* ===============================
-   オフライン表示
-================================= */
-function updateOfflineBanner() {
-  const banner = document.getElementById('offline-banner');
-  if (!banner) return;
-  banner.classList.toggle('show', !navigator.onLine);
-}
-
-window.addEventListener('offline', updateOfflineBanner);
-window.addEventListener('online', updateOfflineBanner);
-
+});
 </script>
+
+</body>
+</html>
