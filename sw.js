@@ -1,35 +1,17 @@
-const CACHE_NAME = 'gist-memo-v6';
-const APP_SHELL = [
+// sw.js
+const CACHE_NAME = 'gist-memo-v5';
+const ASSETS = [
   './',
   './index.html',
-  './manifest.json'
+  'https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap'
 ];
 
-// install
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(APP_SHELL);
-    })
-  );
-  self.skipWaiting();
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
 });
 
-// activate
-self.addEventListener('activate', event => {
-  event.waitUntil(self.clients.claim());
-});
-
-// fetch
-self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-
-  // GitHub APIはキャッシュしない
-  if (url.hostname.includes('api.github.com')) return;
-
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      return cached || fetch(event.request);
-    })
+self.addEventListener('fetch', (e) => {
+  e.respondWith(
+    caches.match(e.request).then(response => response || fetch(e.request))
   );
 });

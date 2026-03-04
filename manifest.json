@@ -4,5 +4,9 @@
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f5f2eb",
-  "theme_color": "#c8441a"
+  "theme_color": "#c8441a",
+  "icons": [
+    { "src": "https://via.placeholder.com/192/c8441a/ffffff?text=M", "sizes": "192x192", "type": "image/png" },
+    { "src": "https://via.placeholder.com/512/c8441a/ffffff?text=Memo", "sizes": "512x512", "type": "image/png" }
+  ]
 }

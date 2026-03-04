@@ -1,204 +1,574 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#c8441a">
+<link rel="manifest" href="manifest.json">
+<title>Gist Memo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap');
+  :root {
+    --bg:#f5f2eb; --paper:#fdfcf8; --ink:#1a1814; --ink-light:#6b6760;
+    --accent:#c8441a; --border:#dedad2; --shadow:rgba(26,24,20,0.08);
+    --sidebar-w:270px;
+  }
+  [data-theme="dark"] {
+    --bg:#1a1814; --paper:#222018; --ink:#e8e4dc; --ink-light:#8a8680;
+    --accent:#e05a2b; --border:#2e2c28; --shadow:rgba(0,0,0,0.3);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column;}
+
+  /* Topbar */
+  #topbar{display:flex;align-items:center;gap:0.8rem;padding:0.65rem 1.2rem;background:var(--paper);border-bottom:1px solid var(--border);flex-shrink:0;z-index:10;}
+  #topbar h1{font-family:'DM Mono',monospace;font-weight:300;font-size:1rem;letter-spacing:0.08em;}
+  #topbar h1 span{color:var(--accent);}
+  #status-badge{font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--ink-light);letter-spacing:0.04em;}
+  #autosave-indicator{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--ink-light);opacity:0;transition:opacity 0.4s;}
+  #autosave-indicator.show{opacity:1;}
+  .topbar-btn{background:transparent;border:1px solid var(--border);color:var(--ink-light);padding:0.32rem 0.75rem;font-family:'DM Mono',monospace;font-size:0.72rem;cursor:pointer;border-radius:3px;transition:all 0.15s;white-space:nowrap;}
+  .topbar-btn:hover{border-color:var(--ink-light);color:var(--ink);}
+  #btn-settings{margin-left:auto;}
+
+  /* Layout */
+  #main{display:flex;flex:1;overflow:hidden;}
+
+  /* Sidebar */
+  #sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--paper);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+  #sidebar-header{padding:0.8rem;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:0.6rem;}
+  #btn-new{background:var(--ink);color:var(--bg);padding:0.5rem;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:0.04em;cursor:pointer;border:none;border-radius:3px;width:100%;transition:background 0.15s;}
+  #btn-new:hover{background:var(--accent);}
+  #search{width:100%;padding:0.42rem 0.7rem;border:1px solid var(--border);border-radius:3px;background:var(--bg);font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);outline:none;transition:border-color 0.2s;}
+  #search:focus{border-color:var(--accent);}
+
+  /* Tag filter bar */
+  #tag-filter-bar{display:flex;flex-wrap:wrap;gap:0.3rem;padding:0.5rem 0.8rem;border-bottom:1px solid var(--border);min-height:34px;}
+  .tag-filter-chip{font-family:'DM Mono',monospace;font-size:0.65rem;padding:0.2rem 0.55rem;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--ink-light);cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .tag-filter-chip:hover{border-color:var(--accent);color:var(--accent);}
+  .tag-filter-chip.active{background:var(--accent);color:white;border-color:var(--accent);}
+
+  #memo-list{flex:1;overflow-y:auto;padding:0.3rem 0;}
+
+  /* Memo list items */
+  .memo-item{padding:0.7rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s;user-select:none;}
+  .memo-item:hover{background:var(--bg);}
+  .memo-item.active{background:var(--bg);border-left:3px solid var(--accent);padding-left:calc(1rem - 3px);}
+  .memo-item.drag-over{border-top:2px solid var(--accent);}
+  .memo-item.dragging{opacity:0.4;}
+  .memo-item.pinned{border-left:3px solid #e8a020;padding-left:calc(1rem - 3px);}
+  .memo-item.pinned.active{border-left:3px solid var(--accent);}
+  .memo-item-title{font-size:0.84rem;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:0.2rem;display:flex;align-items:center;gap:0.4rem;}
+  .memo-item-drag{color:var(--border);font-size:0.8rem;cursor:grab;flex-shrink:0;}
+  .pin-icon{font-size:0.7rem;flex-shrink:0;}
+  .memo-item-meta{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--ink-light);}
+  .memo-item-preview{font-size:0.7rem;color:var(--ink-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:0.15rem;}
+  .memo-item-tags{display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.3rem;}
+  .tag-chip{font-family:'DM Mono',monospace;font-size:0.6rem;padding:0.1rem 0.45rem;border-radius:20px;background:var(--border);color:var(--ink-light);}
+
+  /* Editor */
+  #editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  #editor-header{padding:0.75rem 1.2rem;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:0.5rem;background:var(--paper);}
+  #title-input{font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:500;color:var(--ink);border:none;outline:none;background:transparent;width:100%;}
+  #title-input::placeholder{color:var(--border);}
+  #meta-info{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--ink-light);}
+
+  #tag-editor{display:flex;flex-wrap:wrap;align-items:center;gap:0.3rem;}
+  .tag-edit-chip{font-family:'DM Mono',monospace;font-size:0.65rem;padding:0.15rem 0.5rem;border-radius:20px;background:var(--border);color:var(--ink-light);display:flex;align-items:center;gap:0.3rem;}
+  .tag-edit-chip button{background:none;border:none;cursor:pointer;color:var(--ink-light);font-size:0.75rem;padding:0;line-height:1;}
+  .tag-edit-chip button:hover{color:var(--accent);}
+  #tag-input{font-family:'DM Mono',monospace;font-size:0.68rem;border:1px dashed var(--border);border-radius:20px;padding:0.15rem 0.6rem;background:transparent;outline:none;color:var(--ink);width:100px;transition:border-color 0.2s;}
+  #tag-input:focus{border-color:var(--accent);}
+  #tag-input::placeholder{color:var(--border);}
+
+  #memo-body{flex:1;padding:1.4rem 2rem;font-family:'DM Mono',monospace;font-size:0.88rem;line-height:1.8;color:var(--ink);border:none;outline:none;resize:none;background:var(--paper);overflow-y:auto;}
+  #memo-body::placeholder{color:var(--border);}
+  #editor-footer{padding:0.6rem 1.2rem;padding-bottom:calc(0.6rem + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--bg);display:flex;align-items:center;gap:0.5rem;}
+  button.primary{background:var(--accent);color:white;padding:0.42rem 1rem;font-family:'DM Mono',monospace;font-size:0.78rem;cursor:pointer;border:none;border-radius:3px;transition:opacity 0.15s;}
+  button.primary:hover{opacity:0.85;}
+  button.primary:disabled{background:var(--border);color:var(--ink-light);cursor:not-allowed;}
+  button.ghost{background:transparent;color:var(--ink-light);padding:0.42rem 0.75rem;font-family:'DM Mono',monospace;font-size:0.78rem;cursor:pointer;border:1px solid var(--border);border-radius:3px;transition:all 0.15s;}
+  button.ghost:hover{border-color:var(--ink-light);color:var(--ink);}
+  button.danger{background:transparent;color:#c8441a;padding:0.42rem 0.75rem;font-family:'DM Mono',monospace;font-size:0.78rem;cursor:pointer;border:1px solid #e8b4a4;border-radius:3px;transition:all 0.15s;margin-left:auto;}
+  button.danger:hover{background:#fff0ed;}
+  #char-count{font-family:'DM Mono',monospace;font-size:0.67rem;color:var(--ink-light);}
+
+  /* Autosave toggle */
+  #autosave-wrap{display:flex;align-items:center;gap:0.4rem;margin-left:auto;}
+  .toggle{position:relative;display:inline-block;width:32px;height:18px;}
+  .toggle input{opacity:0;width:0;height:0;}
+  .toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:18px;cursor:pointer;transition:background 0.2s;}
+  .toggle-slider:before{content:'';position:absolute;width:12px;height:12px;left:3px;top:3px;background:white;border-radius:50%;transition:transform 0.2s;}
+  .toggle input:checked + .toggle-slider{background:var(--accent);}
+  .toggle input:checked + .toggle-slider:before{transform:translateX(14px);}
+  #autosave-label{font-family:'DM Mono',monospace;font-size:0.67rem;color:var(--ink-light);}
+
+  #empty-state{flex:1;display:flex;align-items:center;justify-content:center;background:var(--paper);}
+  #empty-state p{font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--ink-light);}
+  #editor{display:none;flex:1;flex-direction:column;overflow:hidden;}
+
+  /* Overlays & Modals */
+  #overlay, #backup-modal, #export-modal, #sync-modal {
+    position:fixed;inset:0;background:rgba(26,24,20,0.5);display:none;align-items:center;justify-content:center;z-index:150;backdrop-filter:blur(2px);
+  }
+  #overlay.show, #backup-modal.open, #export-modal.open, #sync-modal.open { display:flex; }
+  #overlay { background:rgba(245,242,235,0.92); z-index:100; }
+
+  #setup-box, #backup-box, #export-box, #sync-box {
+    background:var(--paper);border:1px solid var(--border);border-radius:6px;padding:1.8rem;width:100%;max-width:440px;box-shadow:0 8px 32px var(--shadow);
+  }
+  #backup-box { max-width:480px; max-height:80vh; display:flex; flex-direction:column; }
+  #export-box { max-width:360px; }
+  #sync-box { max-width:400px; }
+
+  .field{margin-bottom:1.1rem;}
+  .field label{display:block;font-size:0.72rem;font-family:'DM Mono',monospace;color:var(--ink-light);margin-bottom:0.35rem;}
+  .field input{width:100%;padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:3px;background:var(--bg);font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--ink);outline:none;}
+  .field small{display:block;margin-top:0.3rem;font-size:0.68rem;color:var(--ink-light);}
+
+  #offline-banner{display:none;position:fixed;top:0;left:0;right:0;z-index:300;background:#e8a020;color:white;font-family:'DM Mono',monospace;font-size:0.75rem;text-align:center;padding:0.4rem;}
+  #offline-banner.show{display:block;}
+
+  #toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--bg);font-family:'DM Mono',monospace;font-size:0.76rem;padding:0.55rem 1.3rem;border-radius:3px;opacity:0;transition:all 0.22s;pointer-events:none;z-index:200;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  #toast.error{background:var(--accent);}
+
+  #btn-menu{display:none;background:transparent;border:1px solid var(--border);color:var(--ink-light);padding:0.32rem 0.65rem;font-size:1rem;cursor:pointer;border-radius:3px;line-height:1;}
+
+  @media(max-width:600px){
+    #sidebar{position:fixed;inset:0;top:45px;z-index:50;transform:translateX(-100%);transition:transform 0.25s;width:100%;min-width:unset;}
+    #sidebar.open{transform:translateX(0);}
+    #btn-menu{display:flex!important;}
+    #memo-body{padding:1rem;}
+    #memo-list{padding-bottom:env(safe-area-inset-bottom);}
+  }
+</style>
+</head>
+<body>
+
+<div id="offline-banner">📡 オフライン中 — 編集内容はローカルに保存されます</div>
+
+<div id="topbar">
+  <button id="btn-menu" onclick="toggleSidebar()">☰</button>
+  <h1>gist<span>.</span>memo</h1>
+  <span id="status-badge">—</span>
+  <span id="autosave-indicator">自動保存中…</span>
+  <button class="topbar-btn" id="btn-darkmode" title="ダークモード切替">🌙</button>
+  <button class="topbar-btn" id="btn-backup-open">履歴</button>
+  <button class="topbar-btn" id="btn-export-open">出力</button>
+  <button class="topbar-btn" id="btn-settings">設定</button>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <button id="btn-new">＋ 新しいメモ</button>
+      <input id="search" type="search" placeholder="検索...">
+    </div>
+    <div id="tag-filter-bar"></div>
+    <div id="memo-list"></div>
+  </div>
+
+  <div id="editor-area">
+    <div id="empty-state"><p>← メモを選択するか、新規作成してください</p></div>
+    <div id="editor">
+      <div id="editor-header">
+        <input id="title-input" type="text" placeholder="タイトル">
+        <div id="tag-editor">
+          <input id="tag-input" type="text" placeholder="タグを追加…">
+        </div>
+        <div id="meta-info"></div>
+      </div>
+      <textarea id="memo-body" placeholder="ここにメモを書く..."></textarea>
+      <div id="editor-footer">
+        <button class="primary" id="btn-save">保存 (⌘S)</button>
+        <button class="ghost" id="btn-revert">復元</button>
+        <span id="char-count">0 文字</span>
+        <div id="autosave-wrap">
+          <span id="autosave-label">自動保存</span>
+          <label class="toggle">
+            <input type="checkbox" id="autosave-toggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <button class="ghost" id="btn-pin">📌 ピン</button>
+        <button class="danger" id="btn-delete">削除</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="setup-box">
+    <h2>接続設定</h2>
+    <div class="field">
+      <label>GitHub Personal Access Token</label>
+      <input type="password" id="inp-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Gist ID</label>
+      <input type="text" id="inp-gist" placeholder="abc123def456..." autocomplete="off">
+    </div>
+    <div style="display:flex;gap:0.6rem;margin-top:0.5rem;">
+      <button class="primary" id="btn-connect">接続する</button>
+      <button class="ghost" id="btn-cancel-setup" style="display:none">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<div id="sync-modal">
+  <div id="sync-box">
+    <h3>オフライン編集の同期</h3>
+    <p>ネットワークが復帰しました。オフライン中の編集をGistに反映しますか？</p>
+    <div style="display:flex;gap:0.6rem">
+      <button class="primary" id="btn-sync-upload">同期する</button>
+      <button class="ghost" id="btn-sync-discard">破棄して読込</button>
+    </div>
+  </div>
+</div>
+
+<div id="backup-modal">
+  <div id="backup-box">
+    <h3>バックアップ（直近10件）</h3>
+    <div id="backup-list" style="flex:1;overflow-y:auto;margin-bottom:1rem"></div>
+    <div style="display:flex;gap:0.6rem">
+      <button class="primary" id="btn-backup-now">今すぐ作成</button>
+      <button class="ghost" onclick="document.getElementById('backup-modal').classList.remove('open')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="export-modal">
+  <div id="export-box">
+    <h3>エクスポート</h3>
+    <button class="ghost" id="exp-txt" style="width:100%;margin-bottom:0.5rem;text-align:left">📄 テキスト (.txt)</button>
+    <button class="ghost" id="exp-md" style="width:100%;margin-bottom:0.5rem;text-align:left">📝 Markdown (.md)</button>
+    <button class="ghost" id="exp-all" style="width:100%;margin-bottom:1rem;text-align:left">📦 全メモ一括 (.md)</button>
+    <button class="ghost" style="width:100%" onclick="document.getElementById('export-modal').classList.remove('open')">キャンセル</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
 <script>
-/* ===============================
-   PWA / Service Worker
-================================= */
+// --- Service Worker Registration ---
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(() => console.log('SW registered'))
-      .catch(e => console.warn('SW error:', e));
-  });
+  navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW:', e));
 }
 
-/* ===============================
-   State
-================================= */
+// --- State ---
 let token='', gistId='', memos=[], currentId=null, savedSnapshot=null;
 let autosaveTimer=null, autosaveEnabled=false, pendingChanges=false;
-let activeTagFilter=null;
-let backupKeys = [];
-let knownFiles = new Set();
-let isOffline = !navigator.onLine;
+let activeTagFilter=null, knownFiles=new Set(), backupKeys=[], isOffline=!navigator.onLine;
 
-/* ===============================
-   初期化
-================================= */
+// --- Init ---
 window.addEventListener('DOMContentLoaded', () => {
-
-  token  = localStorage.getItem('gm_token');
-  gistId = localStorage.getItem('gm_gist_id');
+  token  = localStorage.getItem('gm_token') || '';
+  gistId = localStorage.getItem('gm_gist_id') || '';
   autosaveEnabled = localStorage.getItem('gm_autosave') === 'true';
-
   document.getElementById('autosave-toggle').checked = autosaveEnabled;
-
-  // ★ オフライン単独起動対応
-  const cached = localStorage.getItem('gm_cached_memos');
-  if ((!token || !gistId) && cached) {
-    memos = JSON.parse(cached);
-    savedSnapshot = JSON.parse(cached);
-    renderTagFilterBar();
-    renderList();
-    if (memos.length > 0) selectMemo(memos[0].id);
-    setStatus('オフライン表示');
-    document.getElementById('overlay').style.display = 'none';
-    return;
-  }
-
+  updateOfflineBanner();
+  
   if (token && gistId) {
     document.getElementById('inp-token').value = token;
     document.getElementById('inp-gist').value  = gistId;
     connect(false);
+  } else {
+    document.getElementById('overlay').classList.add('show');
   }
 });
 
-/* ===============================
-   接続
-================================= */
-document.getElementById('btn-connect').addEventListener('click', () => connect(true));
-
-async function connect(showFeedback=true) {
-
+// --- Connection & Offline Logic ---
+async function connect(showFeedback) {
   token  = document.getElementById('inp-token').value.trim();
   gistId = document.getElementById('inp-gist').value.trim();
+  if (!token || !gistId) return;
 
-  if (!token || !gistId) {
-    if(showFeedback) toast('TokenとGist IDを入力してください',true);
-    return;
-  }
-
-  try {
-    const data = await apiGet();
-
-    localStorage.setItem('gm_token', token);
-    localStorage.setItem('gm_gist_id', gistId);
-
-    loadFromGist(data);
-
-    document.getElementById('overlay').style.display = 'none';
-    setStatus('接続済み');
-    if(showFeedback) toast('接続しました');
-
-  } catch(e) {
-
-    // ★ オフライン復元
-    const cached = localStorage.getItem('gm_cached_memos');
-    if (cached) {
-      memos = JSON.parse(cached);
-      savedSnapshot = JSON.parse(cached);
-      renderTagFilterBar();
-      renderList();
-      if (memos.length > 0) selectMemo(memos[0].id);
-      document.getElementById('overlay').style.display = 'none';
-      setStatus('オフライン表示');
-      toast('オフラインモードで起動しました');
+  // オフライン時のフォールバック起動
+  if (!navigator.onLine) {
+    const localData = localStorage.getItem('gm_offline_draft');
+    if (localData) {
+      loadOfflineData(JSON.parse(localData));
+      document.getElementById('overlay').classList.remove('show');
+      setStatus('オフライン閲覧中');
+      if (showFeedback) toast('オフラインモードで起動しました');
       return;
     }
+  }
 
-    setStatus('接続失敗');
-    toast('接続失敗：Token または Gist ID を確認してください', true);
+  setStatus('接続中…');
+  try {
+    const data = await apiGet();
+    localStorage.setItem('gm_token', token);
+    localStorage.setItem('gm_gist_id', gistId);
+    loadFromGist(data);
+    saveOfflineDraft(true); // 控えを保存
+    document.getElementById('overlay').classList.remove('show');
+    setStatus('接続済み');
+    if(showFeedback) toast('同期しました');
+  } catch(e) {
+    const localData = localStorage.getItem('gm_offline_draft');
+    if (localData) {
+      loadOfflineData(JSON.parse(localData));
+      document.getElementById('overlay').classList.remove('show');
+      setStatus('オフライン(キャッシュ)');
+      toast('通信エラーのためキャッシュを読み込みました');
+    } else {
+      setStatus('エラー');
+      toast('接続失敗。Token等を確認してください', true);
+    }
   }
 }
 
-/* ===============================
-   Gist読み込み
-================================= */
-function loadFromGist(data) {
+function loadOfflineData(draft) {
+  memos = draft.memos || [];
+  savedSnapshot = deepClone(memos);
+  knownFiles = new Set(draft.knownFiles || []);
+  backupKeys = draft.backupKeys || [];
+  renderTagFilterBar(); renderList();
+  if (memos.length > 0) selectMemo(memos[0].id);
+}
 
+function saveOfflineDraft(force = false) {
+  if (!force && !isOffline) return;
+  const draft = {
+    memos: deepClone(memos),
+    knownFiles: [...knownFiles],
+    backupKeys: [...backupKeys],
+    savedAt: new Date().toISOString()
+  };
+  localStorage.setItem('gm_offline_draft', JSON.stringify(draft));
+}
+
+function updateOfflineBanner() {
+  const banner = document.getElementById('offline-banner');
+  isOffline = !navigator.onLine;
+  if (isOffline) {
+    banner.classList.add('show');
+    document.getElementById('topbar').style.marginTop = '28px';
+  } else {
+    banner.classList.remove('show');
+    document.getElementById('topbar').style.marginTop = '';
+  }
+}
+
+window.addEventListener('offline', () => { updateOfflineBanner(); toast('オフラインになりました', true); });
+window.addEventListener('online', () => {
+  updateOfflineBanner();
+  if (localStorage.getItem('gm_offline_draft')) {
+    document.getElementById('sync-modal').classList.add('open');
+  } else {
+    toast('オンラインに戻りました');
+  }
+});
+
+// --- Core App Logic (Simplified & Combined) ---
+function loadFromGist(data) {
   const files = data.files;
   const loaded = [];
-
+  let order = null;
+  if (files['index.json']) { try { order = JSON.parse(files['index.json'].content); } catch(e) {} }
   for (const fname of Object.keys(files)) {
     if (!fname.startsWith('memo_') || !fname.endsWith('.json')) continue;
     try {
       const m = JSON.parse(files[fname].content);
       const id = fname.replace('memo_','').replace('.json','');
       loaded.push({ id, ...m });
-    } catch(e){}
+    } catch(e) {}
   }
-
-  loaded.sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
-
+  if (order) {
+    loaded.sort((a,b) => { const ia=order.indexOf(a.id), ib=order.indexOf(b.id); return (ia===-1?999:ia) - (ib===-1?999:ib); });
+  } else {
+    loaded.sort((a,b) => (b.updatedAt||'').localeCompare(a.updatedAt||''));
+  }
   memos = loaded;
-  savedSnapshot = JSON.parse(JSON.stringify(memos));
-
-  renderTagFilterBar();
-  renderList();
-
+  savedSnapshot = deepClone(memos);
+  backupKeys = Object.keys(files).filter(f => f.startsWith('bk_')).map(f => f.replace('.json','')).sort();
+  knownFiles = new Set(Object.keys(files));
+  renderTagFilterBar(); renderList();
   if (memos.length > 0) selectMemo(memos[0].id);
-
-  // ★ 常時ローカルキャッシュ保存（超重要）
-  localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
 }
 
-/* ===============================
-   保存（オフライン完全対応）
-================================= */
+function renderList() {
+  const list = document.getElementById('memo-list');
+  list.innerHTML = '';
+  const q = document.getElementById('search').value.toLowerCase();
+  let shown = memos.filter(m => (m.title||'').toLowerCase().includes(q) || (m.body||'').toLowerCase().includes(q));
+  if (activeTagFilter) shown = shown.filter(m => (m.tags||[]).includes(activeTagFilter));
+  
+  shown.sort((a,b) => (b.pinned?1:0)-(a.pinned?1:0));
+  shown.forEach(m => {
+    const el = document.createElement('div');
+    el.className = `memo-item ${m.id===currentId?'active':''} ${m.pinned?'pinned':''}`;
+    el.innerHTML = `
+      <div class="memo-item-title">${m.pinned?'📌 ':''}${esc(m.title||'無題')}</div>
+      <div class="memo-item-preview">${esc(m.body.slice(0,40))}</div>
+    `;
+    el.onclick = () => { selectMemo(m.id); closeSidebar(); };
+    list.appendChild(el);
+  });
+}
+
+function selectMemo(id) {
+  currentId = id;
+  const m = memos.find(x=>x.id===id);
+  if(!m) return;
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('editor').style.display = 'flex';
+  document.getElementById('title-input').value = m.title || '';
+  document.getElementById('memo-body').value = m.body || '';
+  renderTagEditor(m); updatePinBtn(m); renderList();
+}
+
 async function save(silent=false) {
-
   if (!currentId) return;
-
   const m = memos.find(x=>x.id===currentId);
-  if (!m) return;
-
   m.updatedAt = new Date().toISOString();
 
-  // ★ オフライン保存
   if (!navigator.onLine) {
-    localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
-    setStatus('ローカル保存済み');
-    if(!silent) toast('オフライン保存しました');
-    renderList();
+    saveOfflineDraft();
+    setStatus('ローカル保存済');
+    if(!silent) toast('オフライン：ローカルに保存しました');
     return;
   }
 
+  setStatus('保存中…');
   try {
     await apiPatch(buildPatch());
-    savedSnapshot = JSON.parse(JSON.stringify(memos));
+    savedSnapshot = deepClone(memos);
+    pendingChanges = false;
+    saveOfflineDraft(true);
     setStatus('保存済み');
-    if(!silent) toast('保存しました ✓');
-
-    // ★ 保存成功後もローカル更新
-    localStorage.setItem('gm_cached_memos', JSON.stringify(memos));
-
-  } catch(e) {
-    setStatus('保存失敗');
-    if(!silent) toast('保存に失敗しました', true);
-  }
+    if(!silent) toast('Gistに保存しました ✓');
+  } catch(e) { setStatus('保存失敗'); }
 }
 
-/* ===============================
-   API
-================================= */
-async function apiGet() {
-  const res = await fetch('https://api.github.com/gists/'+gistId,{
-    headers:{ Authorization:'token '+token }
+function buildPatch() {
+  const files = { 'index.json': { content: JSON.stringify(memos.map(m=>m.id)) } };
+  memos.forEach(m => {
+    files[`memo_${m.id}.json`] = { content: JSON.stringify({title:m.title, body:m.body, tags:m.tags||[], pinned:m.pinned||false, createdAt:m.createdAt, updatedAt:m.updatedAt}) };
   });
-  if(!res.ok) throw new Error(res.status);
+  if (savedSnapshot) {
+    const curIds = new Set(memos.map(m=>m.id));
+    savedSnapshot.forEach(m => { if(!curIds.has(m.id)) files[`memo_${m.id}.json`] = null; });
+  }
+  return files;
+}
+
+// --- API Helpers ---
+async function apiGet() {
+  const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+    headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
+  });
+  if(!res.ok) throw new Error();
   return res.json();
 }
 
 async function apiPatch(files) {
-  const res = await fetch('https://api.github.com/gists/'+gistId,{
-    method:'PATCH',
-    headers:{
-      Authorization:'token '+token,
-      'Content-Type':'application/json'
-    },
-    body: JSON.stringify({files})
+  const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ files })
   });
-  if(!res.ok) throw new Error(res.status);
+  if(!res.ok) throw new Error();
+  return res.json();
 }
 
-/* ===============================
-   オフライン表示
-================================= */
-function updateOfflineBanner() {
-  const banner = document.getElementById('offline-banner');
-  if (!banner) return;
-  banner.classList.toggle('show', !navigator.onLine);
+// --- Sync Modal Events ---
+document.getElementById('btn-sync-upload').onclick = async () => {
+  document.getElementById('sync-modal').classList.remove('open');
+  await save();
+  localStorage.removeItem('gm_offline_draft');
+};
+document.getElementById('btn-sync-discard').onclick = () => {
+  document.getElementById('sync-modal').classList.remove('open');
+  localStorage.removeItem('gm_offline_draft');
+  connect(true);
+};
+
+// --- Utilities & Handlers ---
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function deepClone(obj){ return JSON.parse(JSON.stringify(obj)); }
+function toast(m, err=false){
+  const t = document.getElementById('toast');
+  t.textContent = m; t.className = `show ${err?'error':''}`;
+  setTimeout(()=>t.className='', 2500);
+}
+function setStatus(s){ document.getElementById('status-badge').textContent = s; }
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); }
+function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+// Events
+document.getElementById('btn-new').onclick = () => {
+  const m = { id:genId(), title:'', body:'', tags:[], pinned:false, createdAt:new Date().toISOString() };
+  memos.unshift(m); renderList(); selectMemo(m.id); closeSidebar();
+};
+document.getElementById('btn-save').onclick = () => save();
+document.getElementById('title-input').oninput = e => { const m=memos.find(x=>x.id===currentId); if(m){m.title=e.target.value; renderList(); pendingChanges=true;}};
+document.getElementById('memo-body').oninput = e => { const m=memos.find(x=>x.id===currentId); if(m){m.body=e.target.value; pendingChanges=true; document.getElementById('char-count').textContent=m.body.length+' 文字';}};
+document.getElementById('search').oninput = () => renderList();
+document.getElementById('btn-settings').onclick = () => document.getElementById('overlay').classList.add('show');
+document.getElementById('btn-connect').onclick = () => connect(true);
+document.addEventListener('keydown', e => { if((e.ctrlKey||e.metaKey)&&e.key==='s'){ e.preventDefault(); save(); }});
+
+// --- UI Helpers (Tags & Pins) ---
+function renderTagFilterBar() {
+  const bar = document.getElementById('tag-filter-bar');
+  const tags = [...new Set(memos.flatMap(m=>m.tags||[]))].sort();
+  bar.innerHTML = `<span class="tag-filter-chip ${!activeTagFilter?'active':''}" onclick="activeTagFilter=null;renderTagFilterBar();renderList()">すべて</span>`;
+  tags.forEach(t => {
+    const chip = document.createElement('span');
+    chip.className = `tag-filter-chip ${activeTagFilter===t?'active':''}`;
+    chip.textContent = '#'+t;
+    chip.onclick = () => { activeTagFilter=(activeTagFilter===t?null:t); renderTagFilterBar(); renderList(); };
+    bar.appendChild(chip);
+  });
 }
 
-window.addEventListener('offline', updateOfflineBanner);
-window.addEventListener('online', updateOfflineBanner);
+function renderTagEditor(m) {
+  const area = document.getElementById('tag-editor');
+  area.querySelectorAll('.tag-edit-chip').forEach(c=>c.remove());
+  (m.tags||[]).forEach(t => {
+    const c = document.createElement('span');
+    c.className = 'tag-edit-chip';
+    c.innerHTML = `#${t} <button onclick="removeTag('${t}')">×</button>`;
+    area.insertBefore(c, document.getElementById('tag-input'));
+  });
+}
+
+window.removeTag = (t) => {
+  const m = memos.find(x=>x.id===currentId);
+  m.tags = m.tags.filter(x=>x!==t);
+  renderTagEditor(m); renderTagFilterBar(); renderList(); pendingChanges=true;
+};
+
+document.getElementById('tag-input').onkeydown = e => {
+  if(e.key==='Enter'){
+    const val = e.target.value.trim().replace(/[#\s,]/g,'');
+    const m = memos.find(x=>x.id===currentId);
+    if(val && m){
+      if(!m.tags) m.tags=[];
+      if(!m.tags.includes(val)) m.tags.push(val);
+      e.target.value=''; renderTagEditor(m); renderTagFilterBar(); renderList(); pendingChanges=true;
+    }
+  }
+};
+
+function updatePinBtn(m){
+  const b = document.getElementById('btn-pin');
+  b.style.color = m.pinned ? 'var(--accent)' : '';
+  b.onclick = () => { m.pinned=!m.pinned; updatePinBtn(m); renderList(); pendingChanges=true; };
+}
+
+// --- Theme ---
+document.getElementById('btn-darkmode').onclick = () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('gm_darkmode', !isDark);
+};
+if(localStorage.getItem('gm_darkmode')==='true') document.documentElement.setAttribute('data-theme', 'dark');
 
 </script>
+</body>
+</html>
