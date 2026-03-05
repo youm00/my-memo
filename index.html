@@ -244,7 +244,7 @@
 <div id="sync-modal">
   <div id="sync-box">
     <h3>オフライン中の編集があります</h3>
-    <p>ネットワークが復帰しました。オフライン中に編集した内容をGistに同期しますか？</p>
+    <p>ネットワークが復帰しました.オフライン中に編集した内容をGistに同期しますか?</p>
     <div class="btn-row">
       <button class="primary" id="btn-sync-upload">Gistに同期する</button>
       <button class="ghost" id="btn-sync-discard">破棄してGistから読み込む</button>
@@ -619,7 +619,7 @@ function showAutosaveIndicator() {
 
 // ── Revert ──
 document.getElementById('btn-revert').addEventListener('click', () => {
-  if (!confirm('最後に保存した状態に戻しますか？')||!savedSnapshot) return;
+  if (!confirm('最後に保存した状態に戻しますか?')||!savedSnapshot) return;
   memos = deepClone(savedSnapshot);
   renderTagFilterBar(); renderList();
   const still = memos.find(x=>x.id===currentId);
@@ -631,7 +631,7 @@ document.getElementById('btn-revert').addEventListener('click', () => {
 document.getElementById('btn-delete').addEventListener('click', async () => {
   if (!currentId) return;
   const m = memos.find(x=>x.id===currentId);
-  if (!confirm('「'+(m?.title||'無題')+'」を削除しますか？')) return;
+  if (!confirm('「'+(m?.title||'無題')+'」を削除しますか?')) return;
   memos = memos.filter(x=>x.id!==currentId);
   currentId=null;
   document.getElementById('editor').style.display='none';
@@ -833,8 +833,7 @@ async function renderBackupList() {
   } catch(e) { listEl.innerHTML = '<div class="backup-empty">読み込みに失敗しました</div>'; }
 }
 function restoreBackup(snapshot, dateStr) {
-  if (!confirm(dateStr+' のバックアップに復元しますか？
-現在の内容は上書きされます。')) return;
+  if (!confirm(dateStr+' のバックアップに復元しますか?\n現在の内容は上書きされます.')) return;
   memos = deepClone(snapshot.memos||[]);
   savedSnapshot = deepClone(memos);
   currentId = null;
