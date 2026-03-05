@@ -53,44 +53,16 @@
   .memo-item:hover{background:var(--bg);}
   .memo-item.active{background:var(--bg);border-left:3px solid var(--accent);padding-left:calc(1rem - 3px);}
   .memo-item.drag-over{border-top:2px solid var(--accent);}
-  .memo-item.dragging{opacity:0.4;}
   .memo-item.pinned{border-left:3px solid #e8a020;padding-left:calc(1rem - 3px);}
   .memo-item.pinned.active{border-left:3px solid var(--accent);}
+  .pin-icon{font-size:0.7rem;flex-shrink:0;}
+  .memo-item.dragging{opacity:0.4;}
   .memo-item-title{font-size:0.84rem;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:0.2rem;display:flex;align-items:center;gap:0.4rem;}
   .memo-item-drag{color:var(--border);font-size:0.8rem;cursor:grab;flex-shrink:0;}
-  .pin-icon{font-size:0.7rem;flex-shrink:0;}
-
-
-  /* Backup modal */
-  #backup-modal{position:fixed;inset:0;background:rgba(26,24,20,0.5);display:none;align-items:center;justify-content:center;z-index:150;backdrop-filter:blur(2px);}
-  #backup-modal.open{display:flex;}
-  #backup-box{background:var(--paper);border:1px solid var(--border);border-radius:6px;padding:1.6rem;width:100%;max-width:480px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px var(--shadow);}
-  #backup-box h3{font-family:'DM Mono',monospace;font-weight:400;font-size:0.82rem;letter-spacing:0.06em;color:var(--ink-light);text-transform:uppercase;margin-bottom:1rem;}
-  #backup-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:0.4rem;margin-bottom:1rem;}
-  .backup-item{display:flex;align-items:center;gap:0.8rem;padding:0.65rem 0.9rem;border:1px solid var(--border);border-radius:4px;background:transparent;transition:all 0.15s;}
-  .backup-item:hover{border-color:var(--accent);background:var(--bg);}
-  .backup-item-info{flex:1;}
-  .backup-item-date{font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink);}
-  .backup-item-meta{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--ink-light);margin-top:0.15rem;}
-  .backup-item-btn{font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.3rem 0.7rem;border:1px solid var(--border);border-radius:3px;background:transparent;color:var(--ink-light);cursor:pointer;transition:all 0.15s;white-space:nowrap;}
-  .backup-item-btn:hover{border-color:var(--accent);color:var(--accent);}
-  .backup-empty{font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--ink-light);text-align:center;padding:2rem 0;}
-  #backup-footer{display:flex;gap:0.6rem;}
-  /* Export modal */
-  #export-modal{position:fixed;inset:0;background:rgba(26,24,20,0.5);display:none;align-items:center;justify-content:center;z-index:150;backdrop-filter:blur(2px);}
-  #export-modal.open{display:flex;}
-  #export-box{background:var(--paper);border:1px solid var(--border);border-radius:6px;padding:1.6rem;width:100%;max-width:360px;box-shadow:0 8px 32px var(--shadow);}
-  #export-box h3{font-family:'DM Mono',monospace;font-weight:400;font-size:0.82rem;letter-spacing:0.06em;color:var(--ink-light);text-transform:uppercase;margin-bottom:1.2rem;}
-  .export-option{display:flex;align-items:center;gap:0.8rem;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:4px;margin-bottom:0.5rem;cursor:pointer;transition:all 0.15s;background:transparent;}
-  .export-option:hover{border-color:var(--accent);background:var(--bg);}
-  .export-option-icon{font-size:1.2rem;width:28px;text-align:center;}
-  .export-option-label{font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--ink);}
-  .export-option-desc{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--ink-light);}
-  #export-cancel{margin-top:0.8rem;width:100%;}
   .memo-item-meta{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--ink-light);}
   .memo-item-preview{font-size:0.7rem;color:var(--ink-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:0.15rem;}
   .memo-item-tags{display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.3rem;}
-  .tag-chip{font-family:'DM Mono',monospace;font-size:0.6rem;padding:0.1rem 0.45rem;border-radius:20px;background:var(--border);color:var(--ink-light);}
+  .tag-chip{font-family:'DM Mono',monospace;font-size:0.6rem;padding:0.1rem 0.45rem;border-radius:20px;background:#ede9e0;color:var(--ink-light);}
 
   /* Editor */
   #editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
@@ -148,18 +120,6 @@
   /* Offline banner */
   #offline-banner{display:none;position:fixed;top:0;left:0;right:0;z-index:300;background:#e8a020;color:white;font-family:'DM Mono',monospace;font-size:0.75rem;text-align:center;padding:0.4rem;letter-spacing:0.04em;}
   #offline-banner.show{display:block;}
-
-  /* Sync dialog */
-  #sync-modal{position:fixed;inset:0;background:rgba(26,24,20,0.6);display:none;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(2px);}
-  #sync-modal.open{display:flex;}
-  #sync-box{background:var(--paper);border:1px solid var(--border);border-radius:6px;padding:1.8rem;width:100%;max-width:400px;box-shadow:0 8px 32px var(--shadow);}
-  #sync-box h3{font-family:'DM Mono',monospace;font-weight:400;font-size:0.85rem;letter-spacing:0.06em;color:var(--ink-light);text-transform:uppercase;margin-bottom:0.8rem;}
-  #sync-box p{font-size:0.85rem;color:var(--ink);margin-bottom:1.4rem;line-height:1.6;}
-  #sync-box .btn-row{display:flex;gap:0.6rem;}
-
-  /* Offline banner */
-  #offline-banner{display:none;position:fixed;top:0;left:0;right:0;z-index:300;background:#e8a020;color:white;font-family:'DM Mono',monospace;font-size:0.75rem;text-align:center;padding:0.4rem;letter-spacing:0.04em;}
-  #offline-banner.show{display:block;}
   /* Sync dialog */
   #sync-modal{position:fixed;inset:0;background:rgba(26,24,20,0.6);display:none;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(2px);}
   #sync-modal.open{display:flex;}
@@ -167,6 +127,32 @@
   #sync-box h3{font-family:'DM Mono',monospace;font-weight:400;font-size:0.85rem;letter-spacing:0.06em;color:var(--ink-light);text-transform:uppercase;margin-bottom:0.8rem;}
   #sync-box p{font-size:0.85rem;color:var(--ink);margin-bottom:1.4rem;line-height:1.6;}
   #sync-box .btn-row{display:flex;gap:0.6rem;flex-wrap:wrap;}
+  /* Export modal */
+  #export-modal{position:fixed;inset:0;background:rgba(26,24,20,0.5);display:none;align-items:center;justify-content:center;z-index:150;backdrop-filter:blur(2px);}
+  #export-modal.open{display:flex;}
+  #export-box{background:var(--paper);border:1px solid var(--border);border-radius:6px;padding:1.6rem;width:100%;max-width:360px;box-shadow:0 8px 32px var(--shadow);}
+  #export-box h3{font-family:'DM Mono',monospace;font-weight:400;font-size:0.82rem;letter-spacing:0.06em;color:var(--ink-light);text-transform:uppercase;margin-bottom:1.2rem;}
+  .export-option{display:flex;align-items:center;gap:0.8rem;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:4px;margin-bottom:0.5rem;cursor:pointer;transition:all 0.15s;background:transparent;}
+  .export-option:hover{border-color:var(--accent);background:var(--bg);}
+  .export-option-icon{font-size:1.2rem;width:28px;text-align:center;}
+  .export-option-label{font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--ink);}
+  .export-option-desc{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--ink-light);}
+  #export-cancel{margin-top:0.8rem;width:100%;}
+  /* Backup modal */
+  #backup-modal{position:fixed;inset:0;background:rgba(26,24,20,0.5);display:none;align-items:center;justify-content:center;z-index:150;backdrop-filter:blur(2px);}
+  #backup-modal.open{display:flex;}
+  #backup-box{background:var(--paper);border:1px solid var(--border);border-radius:6px;padding:1.6rem;width:100%;max-width:480px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px var(--shadow);}
+  #backup-box h3{font-family:'DM Mono',monospace;font-weight:400;font-size:0.82rem;letter-spacing:0.06em;color:var(--ink-light);text-transform:uppercase;margin-bottom:1rem;}
+  #backup-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:0.4rem;margin-bottom:1rem;}
+  .backup-item{display:flex;align-items:center;gap:0.8rem;padding:0.65rem 0.9rem;border:1px solid var(--border);border-radius:4px;background:transparent;transition:all 0.15s;}
+  .backup-item:hover{border-color:var(--accent);background:var(--bg);}
+  .backup-item-info{flex:1;}
+  .backup-item-date{font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink);}
+  .backup-item-meta{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--ink-light);margin-top:0.15rem;}
+  .backup-item-btn{font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.3rem 0.7rem;border:1px solid var(--border);border-radius:3px;background:transparent;color:var(--ink-light);cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .backup-item-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .backup-empty{font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--ink-light);text-align:center;padding:2rem 0;}
+  #backup-footer{display:flex;gap:0.6rem;}
   /* Toast */
   #toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--bg);font-family:'DM Mono',monospace;font-size:0.76rem;letter-spacing:0.04em;padding:0.55rem 1.3rem;border-radius:3px;opacity:0;transition:all 0.22s;pointer-events:none;white-space:nowrap;z-index:200;}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -182,215 +168,6 @@
     #memo-list{padding-bottom:env(safe-area-inset-bottom);}
   }
 </style>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW:', e));
-}
-
-// ── Offline support ──
-
-function updateOfflineBanner() {
-  const banner = document.getElementById('offline-banner');
-  if (!navigator.onLine) {
-    banner.classList.add('show');
-    // topbarを少し下げてバナーと被らないようにする
-    document.getElementById('topbar').style.marginTop = '28px';
-  } else {
-    banner.classList.remove('show');
-    document.getElementById('topbar').style.marginTop = '';
-  }
-}
-
-// オフラインになったとき
-window.addEventListener('offline', () => {
-  isOffline = true;
-  updateOfflineBanner();
-  toast('オフラインになりました', true);
-});
-
-// オンラインに復帰したとき
-window.addEventListener('online', () => {
-  isOffline = false;
-  updateOfflineBanner();
-
-  // オフライン中に編集があった場合、同期ダイアログを表示
-  const localData = localStorage.getItem('gm_offline_draft');
-  if (localData) {
-    document.getElementById('sync-modal').classList.add('open');
-  } else {
-    toast('オンラインに復帰しました');
-  }
-});
-
-// 同期する
-document.getElementById('btn-sync-upload').addEventListener('click', async () => {
-  document.getElementById('sync-modal').classList.remove('open');
-  const localData = localStorage.getItem('gm_offline_draft');
-  if (!localData) return;
-  try {
-    const draft = JSON.parse(localData);
-    memos = draft.memos;
-    savedSnapshot = deepClone(memos);
-    knownFiles = new Set(draft.knownFiles || [...knownFiles]);
-    backupKeys = draft.backupKeys || backupKeys;
-    renderTagFilterBar(); renderList();
-    const still = memos.find(x => x.id === currentId);
-    if (still) selectMemo(still.id);
-    else if (memos.length > 0) selectMemo(memos[0].id);
-    await apiPatch(buildPatch());
-    localStorage.removeItem('gm_offline_draft');
-    offlineEdited = false;
-    toast('Gistに同期しました ✓');
-  } catch(e) {
-    toast('同期に失敗しました', true);
-  }
-});
-
-// 破棄してGistから読み込む
-document.getElementById('btn-sync-discard').addEventListener('click', async () => {
-  document.getElementById('sync-modal').classList.remove('open');
-  localStorage.removeItem('gm_offline_draft');
-  offlineEdited = false;
-  setStatus('再読み込み中…');
-  try {
-    const data = await apiGet();
-    loadFromGist(data);
-    toast('Gistから再読み込みしました');
-  } catch(e) {
-    toast('読み込みに失敗しました', true);
-  }
-});
-
-// オフライン中の編集をlocalStorageに保存
-function saveOfflineDraft() {
-  if (!isOffline) return;
-  offlineEdited = true;
-  const draft = {
-    memos: deepClone(memos),
-    knownFiles: [...knownFiles],
-    backupKeys: [...backupKeys],
-    savedAt: new Date().toISOString()
-  };
-  localStorage.setItem('gm_offline_draft', JSON.stringify(draft));
-}
-
-// 初期化時にオフライン状態を反映（即時 + 定期チェック）
-function checkOnlineStatus() {
-  const wasOffline = isOffline;
-  isOffline = !navigator.onLine;
-  if (wasOffline !== isOffline) {
-    updateOfflineBanner();
-  }
-}
-
-// ページ読み込み直後に即チェック
-document.addEventListener('DOMContentLoaded', () => {
-  updateOfflineBanner();
-});
-
-// 500ms後にも再チェック（SW経由での表示時に確実に反映させる）
-setTimeout(updateOfflineBanner, 500);
-
-// 2秒ごとに定期チェック（onlineイベントが発火しない場合の保険）
-setInterval(checkOnlineStatus, 2000);
-// ── Offline support ──
-
-function setOffline(offline) {
-  isOffline = offline;
-  const banner = document.getElementById('offline-banner');
-  if (offline) {
-    banner.classList.add('show');
-    document.getElementById('topbar').style.marginTop = '28px';
-    setStatus('オフライン');
-  } else {
-    banner.classList.remove('show');
-    document.getElementById('topbar').style.marginTop = '';
-  }
-}
-
-function saveLocalCache() {
-  try {
-    localStorage.setItem('gm_local_cache', JSON.stringify({
-      memos: deepClone(memos),
-      backupKeys: [...backupKeys],
-      knownFiles: [...knownFiles],
-      savedAt: new Date().toISOString()
-    }));
-  } catch(e) {}
-}
-
-function saveOfflineDraft() {
-  offlineEdited = true;
-  try {
-    localStorage.setItem('gm_offline_draft', JSON.stringify({
-      memos: deepClone(memos),
-      knownFiles: [...knownFiles],
-      backupKeys: [...backupKeys],
-      savedAt: new Date().toISOString()
-    }));
-  } catch(e) {}
-}
-
-// 同期する
-document.getElementById('btn-sync-upload').addEventListener('click', async () => {
-  document.getElementById('sync-modal').classList.remove('open');
-  const localData = localStorage.getItem('gm_offline_draft');
-  if (!localData) return;
-  try {
-    const draft = JSON.parse(localData);
-    memos = draft.memos;
-    savedSnapshot = deepClone(memos);
-    knownFiles = new Set(draft.knownFiles || [...knownFiles]);
-    backupKeys = draft.backupKeys || backupKeys;
-    renderTagFilterBar(); renderList();
-    const still = memos.find(x => x.id === currentId);
-    if (still) selectMemo(still.id);
-    else if (memos.length > 0) selectMemo(memos[0].id);
-    await apiPatch(buildPatch());
-    localStorage.removeItem('gm_offline_draft');
-    offlineEdited = false;
-    saveLocalCache();
-    setOffline(false);
-    toast('Gistに同期しました ✓');
-    setStatus('接続済み');
-  } catch(e) {
-    toast('同期に失敗しました', true);
-  }
-});
-
-// 破棄してGistから読み込む
-document.getElementById('btn-sync-discard').addEventListener('click', async () => {
-  document.getElementById('sync-modal').classList.remove('open');
-  localStorage.removeItem('gm_offline_draft');
-  offlineEdited = false;
-  setStatus('再読み込み中…');
-  try {
-    const data = await apiGet();
-    loadFromGist(data);
-    setOffline(false);
-    toast('Gistから再読み込みしました');
-  } catch(e) {
-    toast('読み込みに失敗しました', true);
-  }
-});
-
-// ネット復帰を30秒ごとにAPIで確認
-setInterval(async () => {
-  if (!isOffline) return;
-  try {
-    await apiGet();
-    setOffline(false);
-    const draft = localStorage.getItem('gm_offline_draft');
-    if (draft) {
-      document.getElementById('sync-modal').classList.add('open');
-    } else {
-      toast('オンラインに復帰しました');
-      setStatus('接続済み');
-    }
-  } catch(e) {}
-}, 30000);
-
-</script>
 </head>
 <body>
 
@@ -474,20 +251,6 @@ setInterval(async () => {
     </div>
   </div>
 </div>
-<div id="offline-banner">📡 オフライン中 — 編集内容はローカルに保存されます</div>
-<div id="sync-modal">
-  <div id="sync-box">
-    <h3>オフライン中の編集があります</h3>
-    <p>ネットワークが復帰しました。オフライン中に編集した内容をGistに同期しますか？</p>
-    <div class="btn-row">
-      <button class="primary" id="btn-sync-upload">Gistに同期する</button>
-      <button class="ghost" id="btn-sync-discard">破棄してGistから読み込む</button>
-    </div>
-  </div>
-</div>
-<div id="toast"></div>
-
-<!-- Backup modal -->
 <div id="backup-modal">
   <div id="backup-box">
     <h3>バックアップ履歴（直近10件）</h3>
@@ -498,42 +261,34 @@ setInterval(async () => {
     </div>
   </div>
 </div>
-
-<!-- Export modal -->
 <div id="export-modal">
   <div id="export-box">
     <h3>エクスポート</h3>
     <div class="export-option" id="exp-txt">
       <span class="export-option-icon">📄</span>
-      <div>
-        <div class="export-option-label">テキスト (.txt)</div>
-        <div class="export-option-desc">本文のみをプレーンテキストで保存</div>
-      </div>
+      <div><div class="export-option-label">テキスト (.txt)</div><div class="export-option-desc">本文のみをプレーンテキストで保存</div></div>
     </div>
     <div class="export-option" id="exp-md">
       <span class="export-option-icon">📝</span>
-      <div>
-        <div class="export-option-label">Markdown (.md)</div>
-        <div class="export-option-desc">タイトル・タグ・本文をMarkdown形式で保存</div>
-      </div>
+      <div><div class="export-option-label">Markdown (.md)</div><div class="export-option-desc">タイトル・タグ・本文をMarkdown形式で保存</div></div>
     </div>
     <div class="export-option" id="exp-all">
       <span class="export-option-icon">📦</span>
-      <div>
-        <div class="export-option-label">全メモ一括 (.md)</div>
-        <div class="export-option-desc">すべてのメモを1ファイルにまとめて保存</div>
-      </div>
+      <div><div class="export-option-label">全メモ一括 (.md)</div><div class="export-option-desc">すべてのメモを1ファイルにまとめて保存</div></div>
     </div>
     <button class="ghost" id="export-cancel">キャンセル</button>
   </div>
 </div>
+<div id="toast"></div>
 
 <script>
 // ── State ──
 let token='', gistId='', memos=[], currentId=null, savedSnapshot=null;
 let autosaveTimer=null, autosaveEnabled=false, pendingChanges=false;
 let activeTagFilter=null;
+let backupKeys=[], knownFiles=new Set();
 let isOffline=false, offlineEdited=false;
+const BACKUP_MAX=10;
 
 // ── Init ──
 window.addEventListener('DOMContentLoaded', () => {
@@ -575,25 +330,6 @@ async function connect(showFeedback) {
     setStatus('接続済み');
     if(showFeedback) toast('接続しました');
   } catch(e) {
-    // API失敗 → localStorageキャッシュから読み込む
-    const cached = localStorage.getItem('gm_local_cache');
-    if (cached) {
-      try {
-        localStorage.setItem('gm_token', token);
-        localStorage.setItem('gm_gist_id', gistId);
-        const parsed = JSON.parse(cached);
-        memos = parsed.memos || [];
-        backupKeys = parsed.backupKeys || [];
-        knownFiles = new Set(parsed.knownFiles || []);
-        savedSnapshot = deepClone(memos);
-        document.getElementById('overlay').style.display = 'none';
-        renderTagFilterBar(); renderList();
-        if (memos.length > 0) selectMemo(memos[0].id);
-        setOffline(true);
-        toast('オフライン — ローカルデータを表示中');
-        return;
-      } catch(e2) {}
-    }
     setStatus('エラー');
     toast('接続失敗：Token または Gist ID を確認してください', true);
   }
@@ -628,12 +364,7 @@ function loadFromGist(data) {
   }
   memos = loaded;
   savedSnapshot = deepClone(memos);
-  // バックアップキー一覧をメモリに読み込む
-  backupKeys = Object.keys(data.files)
-    .filter(f => f.startsWith('bk_') && f.endsWith('.json'))
-    .map(f => f.replace('.json',''))
-    .sort();
-  // Gist上に実在するファイル名を記録
+  backupKeys = Object.keys(data.files).filter(f=>f.startsWith('bk_')&&f.endsWith('.json')).map(f=>f.replace('.json','')).sort();
   knownFiles = new Set(Object.keys(data.files));
   saveLocalCache();
   renderTagFilterBar();
@@ -681,8 +412,7 @@ function renderList(filter) {
   let shown = memos.filter(m => m.title.toLowerCase().includes(q) || m.body.toLowerCase().includes(q));
   if (activeTagFilter) shown = shown.filter(m => (m.tags||[]).includes(activeTagFilter));
 
-  // ピン留め優先ソート（検索・タグフィルター後）
-  shown.sort((a,b) => (b.pinned?1:0)-(a.pinned?1:0));
+  shown.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
   shown.forEach((m, i) => {
     const el = document.createElement('div');
     el.className = 'memo-item' + (m.id===currentId?' active':'') + (m.pinned?' pinned':'');
@@ -834,16 +564,6 @@ async function save(silent=false) {
   const m = memos.find(x=>x.id===currentId);
   if (!m) return;
   m.updatedAt = new Date().toISOString();
-
-  // オフライン時はlocalStorageのみに保存
-  if (!navigator.onLine) {
-    saveOfflineDraft();
-    setStatus('ローカル保存済み');
-    if (!silent) toast('オフライン中 — ローカルに保存しました');
-    renderList(); updateMeta(m);
-    return;
-  }
-
   const btn = document.getElementById('btn-save');
   btn.disabled = true;
   setStatus('保存中…');
@@ -859,7 +579,6 @@ async function save(silent=false) {
     saveLocalCache();
     createBackup(true);
   } catch(e) {
-    // API失敗 → オフラインとして扱いローカル保存
     saveLocalCache();
     saveOfflineDraft();
     setOffline(true);
@@ -890,7 +609,6 @@ function scheduleAutosave() {
 function markPending() {
   pendingChanges = true;
   if (autosaveEnabled && !autosaveTimer) scheduleAutosave();
-  saveOfflineDraft(); // オフライン中はlocalStorageに保存
 }
 
 function showAutosaveIndicator() {
@@ -934,16 +652,11 @@ function buildPatch() {
   memos.forEach(m => {
     files['memo_'+m.id+'.json']={ content: JSON.stringify({title:m.title,body:m.body,tags:m.tags||[],pinned:m.pinned||false,createdAt:m.createdAt,updatedAt:m.updatedAt}) };
   });
-  // 削除されたメモのファイルを消す（savedSnapshotに存在したもののみ）
   if (savedSnapshot) {
-    const cur = new Set(memos.map(m=>m.id));
+    const cur=new Set(memos.map(m=>m.id));
     savedSnapshot.forEach(m=>{ if(!cur.has(m.id)) files['memo_'+m.id+'.json']=null; });
   }
-  // memo.txt は初回のみ存在する可能性があるため、knownFiles に含まれる場合のみ削除
-  if (knownFiles.has('memo.txt')) {
-    files['memo.txt'] = null;
-    knownFiles.delete('memo.txt');
-  }
+  if (knownFiles.has('memo.txt')) { files['memo.txt']=null; knownFiles.delete('memo.txt'); }
   return files;
 }
 
@@ -985,18 +698,7 @@ function toast(msg,isError=false){
   t.textContent=msg; t.className='show'+(isError?' error':'');
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.className='',2800);
 }
-
 // ── Pin ──
-document.getElementById('btn-pin').addEventListener('click', () => {
-  const m = memos.find(x=>x.id===currentId);
-  if (!m) return;
-  m.pinned = !m.pinned;
-  updatePinBtn(m);
-  renderList();
-  markPending();
-  toast(m.pinned ? '📌 ピン留めしました' : 'ピン留めを解除しました');
-});
-
 function updatePinBtn(m) {
   const btn = document.getElementById('btn-pin');
   if (!btn) return;
@@ -1004,6 +706,32 @@ function updatePinBtn(m) {
   btn.style.color = m?.pinned ? 'var(--accent)' : '';
   btn.style.borderColor = m?.pinned ? 'var(--accent)' : '';
 }
+document.getElementById('btn-pin').addEventListener('click', () => {
+  const m = memos.find(x=>x.id===currentId);
+  if (!m) return;
+  m.pinned = !m.pinned;
+  updatePinBtn(m); renderList(); markPending();
+  toast(m.pinned ? '📌 ピン留めしました' : 'ピン留めを解除しました');
+});
+
+// ── Dark mode ──
+function applyTheme(dark) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  document.getElementById('btn-darkmode').textContent = dark ? '☀️' : '🌙';
+}
+document.getElementById('btn-darkmode').addEventListener('click', () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  localStorage.setItem('gm_darkmode', !isDark);
+  applyTheme(!isDark);
+});
+(function initTheme() {
+  const saved = localStorage.getItem('gm_darkmode');
+  if (saved !== null) applyTheme(saved === 'true');
+  else applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+})();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+  if (localStorage.getItem('gm_darkmode') === null) applyTheme(e.matches);
+});
 
 // ── Export ──
 document.getElementById('btn-export-open').addEventListener('click', () => {
@@ -1016,47 +744,52 @@ document.getElementById('export-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('export-modal'))
     document.getElementById('export-modal').classList.remove('open');
 });
-
 document.getElementById('exp-txt').addEventListener('click', () => {
   const m = memos.find(x=>x.id===currentId);
   if (!m) { toast('メモを選択してください', true); return; }
   download(m.title||'memo', '.txt', m.body);
   document.getElementById('export-modal').classList.remove('open');
 });
-
 document.getElementById('exp-md').addEventListener('click', () => {
   const m = memos.find(x=>x.id===currentId);
   if (!m) { toast('メモを選択してください', true); return; }
-  const tags = (m.tags||[]).length > 0 ? '\ntags: ' + m.tags.map(t=>'#'+t).join(' ') : '';
-  const updated = m.updatedAt ? '\nupdated: ' + fmtDate(m.updatedAt) : '';
-  const content = '# ' + (m.title||'無題') + tags + updated + '\n\n' + m.body;
-  download(m.title||'memo', '.md', content);
+  const tags = (m.tags||[]).length > 0 ? '
+tags: '+m.tags.map(t=>'#'+t).join(' ') : '';
+  const updated = m.updatedAt ? '
+updated: '+fmtDate(m.updatedAt) : '';
+  download(m.title||'memo', '.md', '# '+(m.title||'無題')+tags+updated+'
+
+'+m.body);
   document.getElementById('export-modal').classList.remove('open');
 });
-
 document.getElementById('exp-all').addEventListener('click', () => {
   const lines = memos.map(m => {
-    const tags = (m.tags||[]).length > 0 ? '\ntags: ' + m.tags.map(t=>'#'+t).join(' ') : '';
-    const updated = m.updatedAt ? '\nupdated: ' + fmtDate(m.updatedAt) : '';
-    return '# ' + (m.title||'無題') + tags + updated + '\n\n' + m.body;
+    const tags = (m.tags||[]).length > 0 ? '
+tags: '+m.tags.map(t=>'#'+t).join(' ') : '';
+    const updated = m.updatedAt ? '
+updated: '+fmtDate(m.updatedAt) : '';
+    return '# '+(m.title||'無題')+tags+updated+'
+
+'+m.body;
   });
-  download('gist-memo-all', '.md', lines.join('\n\n---\n\n'));
+  download('gist-memo-all', '.md', lines.join('
+
+---
+
+'));
   document.getElementById('export-modal').classList.remove('open');
 });
-
 function download(name, ext, text) {
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = name.replace(/[/\\:*?"<>|]/g,'_') + ext;
+  a.href=url; a.download=name.replace(/[/\\:*?"<>|]/g,'_')+ext;
   document.body.appendChild(a); a.click();
   document.body.removeChild(a); URL.revokeObjectURL(url);
   toast('ダウンロードしました ✓');
 }
 
 // ── Backup ──
-const BACKUP_MAX = 10;
-
 document.getElementById('btn-backup-open').addEventListener('click', () => {
   renderBackupList();
   document.getElementById('backup-modal').classList.add('open');
@@ -1072,216 +805,60 @@ document.getElementById('btn-backup-now').addEventListener('click', async () => 
   await createBackup();
   renderBackupList();
 });
-
-// バックアップキー一覧はメモリで管理（余分なAPI呼び出しを避ける）
-let backupKeys = []; // ロード時に初期化
-let knownFiles = new Set();
-let isOffline = !navigator.onLine;
-let offlineEdited = false; // オフライン中に編集があったか // Gist上に実在するファイル名を追跡
-
 async function createBackup(silent=false) {
   if (memos.length === 0) return;
   const now = new Date();
-  const key = 'bk_' + now.toISOString().replace(/[:.]/g,'').slice(0,15);
-  const snapshot = { createdAt: now.toISOString(), memos: deepClone(memos) };
+  const key = 'bk_'+now.toISOString().replace(/[:.]/g,'').slice(0,15);
   const files = {};
-
-  // 新しいバックアップを追加
-  files[key + '.json'] = { content: JSON.stringify(snapshot) };
-
-  // メモリ上のキー一覧を更新し、超過分を削除
+  files[key+'.json'] = { content: JSON.stringify({createdAt:now.toISOString(), memos:deepClone(memos)}) };
   backupKeys = [...backupKeys, key].sort();
   if (backupKeys.length > BACKUP_MAX) {
     const toDelete = backupKeys.splice(0, backupKeys.length - BACKUP_MAX);
-    toDelete.forEach(k => { files[k + '.json'] = null; });
+    toDelete.forEach(k => { files[k+'.json'] = null; });
   }
-
   try {
     await apiPatch(files);
     if (!silent) toast('バックアップを作成しました ✓');
   } catch(e) {
-    // 失敗した場合はキー一覧を元に戻す
-    backupKeys = backupKeys.filter(k => k !== key);
+    backupKeys = backupKeys.filter(k=>k!==key);
     if (!silent) toast('バックアップの作成に失敗しました', true);
   }
 }
-
 async function renderBackupList() {
   const listEl = document.getElementById('backup-list');
   listEl.innerHTML = '<div class="backup-empty">読み込み中…</div>';
   try {
     const data = await apiGet();
-    const keys = Object.keys(data.files)
-      .filter(f => f.startsWith('bk_') && f.endsWith('.json'))
-      .sort().reverse(); // 新しい順
-
-    if (keys.length === 0) {
-      listEl.innerHTML = '<div class="backup-empty">バックアップはまだありません</div>';
-      return;
-    }
-
+    const keys = Object.keys(data.files).filter(f=>f.startsWith('bk_')&&f.endsWith('.json')).sort().reverse();
+    if (keys.length === 0) { listEl.innerHTML = '<div class="backup-empty">バックアップはまだありません</div>'; return; }
     listEl.innerHTML = '';
     keys.forEach(fname => {
       let snapshot = null;
       try { snapshot = JSON.parse(data.files[fname].content); } catch(e) {}
       if (!snapshot) return;
-
-      const memoCount = (snapshot.memos || []).length;
-      const dateStr = snapshot.createdAt ? fmtDate(snapshot.createdAt) : fname;
-
       const item = document.createElement('div');
       item.className = 'backup-item';
-      item.innerHTML = `
-        <div class="backup-item-info">
-          <div class="backup-item-date">${dateStr}</div>
-          <div class="backup-item-meta">${memoCount} 件のメモ</div>
-        </div>
-        <button class="backup-item-btn">この時点に戻す</button>
-      `;
-      item.querySelector('button').addEventListener('click', () => {
-        restoreBackup(snapshot, dateStr);
-      });
+      item.innerHTML = '<div class="backup-item-info"><div class="backup-item-date">'+fmtDate(snapshot.createdAt)+'</div><div class="backup-item-meta">'+((snapshot.memos||[]).length)+' 件のメモ</div></div><button class="backup-item-btn">この時点に戻す</button>';
+      item.querySelector('button').addEventListener('click', () => restoreBackup(snapshot, fmtDate(snapshot.createdAt)));
       listEl.appendChild(item);
     });
-  } catch(e) {
-    listEl.innerHTML = '<div class="backup-empty">読み込みに失敗しました</div>';
-  }
+  } catch(e) { listEl.innerHTML = '<div class="backup-empty">読み込みに失敗しました</div>'; }
 }
-
 function restoreBackup(snapshot, dateStr) {
-  if (!confirm(dateStr + ' のバックアップに復元しますか？\n現在の内容は上書きされます。')) return;
-  memos = deepClone(snapshot.memos || []);
+  if (!confirm(dateStr+' のバックアップに復元しますか？
+現在の内容は上書きされます。')) return;
+  memos = deepClone(snapshot.memos||[]);
   savedSnapshot = deepClone(memos);
   currentId = null;
-  document.getElementById('editor').style.display = 'none';
-  document.getElementById('empty-state').style.display = 'flex';
-  renderTagFilterBar();
-  renderList();
+  document.getElementById('editor').style.display='none';
+  document.getElementById('empty-state').style.display='flex';
+  renderTagFilterBar(); renderList();
   document.getElementById('backup-modal').classList.remove('open');
   toast('バックアップから復元しました ✓');
-  // Gistにも反映
-  apiPatch(buildPatch()).catch(() => toast('Gistへの反映に失敗しました', true));
+  apiPatch(buildPatch()).then(()=>saveLocalCache()).catch(()=>toast('Gistへの反映に失敗しました',true));
 }
 
-// ── Dark mode ──
-function applyTheme(dark) {
-  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-  document.getElementById('btn-darkmode').textContent = dark ? '☀️' : '🌙';
-}
-
-document.getElementById('btn-darkmode').addEventListener('click', () => {
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  const next = !isDark;
-  localStorage.setItem('gm_darkmode', next);
-  applyTheme(next);
-});
-
-// 初期化：localStorage → OSの設定の順で判定
-(function initTheme() {
-  const saved = localStorage.getItem('gm_darkmode');
-  if (saved !== null) {
-    applyTheme(saved === 'true');
-  } else {
-    applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
-  }
-})();
-
-// OSのダークモード変更を検知（localStorage未設定時のみ）
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-  if (localStorage.getItem('gm_darkmode') === null) applyTheme(e.matches);
-});
-
-// ── Offline support ──
-
-function updateOfflineBanner() {
-  const banner = document.getElementById('offline-banner');
-  if (!navigator.onLine) {
-    banner.classList.add('show');
-    // topbarを少し下げてバナーと被らないようにする
-    document.getElementById('topbar').style.marginTop = '28px';
-  } else {
-    banner.classList.remove('show');
-    document.getElementById('topbar').style.marginTop = '';
-  }
-}
-
-// オフラインになったとき
-window.addEventListener('offline', () => {
-  isOffline = true;
-  updateOfflineBanner();
-  toast('オフラインになりました', true);
-});
-
-// オンラインに復帰したとき
-window.addEventListener('online', () => {
-  isOffline = false;
-  updateOfflineBanner();
-
-  // オフライン中に編集があった場合、同期ダイアログを表示
-  const localData = localStorage.getItem('gm_offline_draft');
-  if (localData) {
-    document.getElementById('sync-modal').classList.add('open');
-  } else {
-    toast('オンラインに復帰しました');
-  }
-});
-
-// 同期する
-document.getElementById('btn-sync-upload').addEventListener('click', async () => {
-  document.getElementById('sync-modal').classList.remove('open');
-  const localData = localStorage.getItem('gm_offline_draft');
-  if (!localData) return;
-  try {
-    const draft = JSON.parse(localData);
-    memos = draft.memos;
-    savedSnapshot = deepClone(memos);
-    knownFiles = new Set(draft.knownFiles || [...knownFiles]);
-    backupKeys = draft.backupKeys || backupKeys;
-    renderTagFilterBar(); renderList();
-    const still = memos.find(x => x.id === currentId);
-    if (still) selectMemo(still.id);
-    else if (memos.length > 0) selectMemo(memos[0].id);
-    await apiPatch(buildPatch());
-    localStorage.removeItem('gm_offline_draft');
-    offlineEdited = false;
-    toast('Gistに同期しました ✓');
-  } catch(e) {
-    toast('同期に失敗しました', true);
-  }
-});
-
-// 破棄してGistから読み込む
-document.getElementById('btn-sync-discard').addEventListener('click', async () => {
-  document.getElementById('sync-modal').classList.remove('open');
-  localStorage.removeItem('gm_offline_draft');
-  offlineEdited = false;
-  setStatus('再読み込み中…');
-  try {
-    const data = await apiGet();
-    loadFromGist(data);
-    toast('Gistから再読み込みしました');
-  } catch(e) {
-    toast('読み込みに失敗しました', true);
-  }
-});
-
-// オフライン中の編集をlocalStorageに保存
-function saveOfflineDraft() {
-  if (!isOffline) return;
-  offlineEdited = true;
-  const draft = {
-    memos: deepClone(memos),
-    knownFiles: [...knownFiles],
-    backupKeys: [...backupKeys],
-    savedAt: new Date().toISOString()
-  };
-  localStorage.setItem('gm_offline_draft', JSON.stringify(draft));
-}
-
-// 初期化時にオフライン状態を反映（即時 + 定期チェック）
-
-// ── Offline support ──
-
+// ── Offline ──
 function setOffline(offline) {
   isOffline = offline;
   const banner = document.getElementById('offline-banner');
@@ -1294,31 +871,23 @@ function setOffline(offline) {
     document.getElementById('topbar').style.marginTop = '';
   }
 }
-
 function saveLocalCache() {
   try {
     localStorage.setItem('gm_local_cache', JSON.stringify({
-      memos: deepClone(memos),
-      backupKeys: [...backupKeys],
-      knownFiles: [...knownFiles],
-      savedAt: new Date().toISOString()
+      memos: deepClone(memos), backupKeys:[...backupKeys],
+      knownFiles:[...knownFiles], savedAt:new Date().toISOString()
     }));
   } catch(e) {}
 }
-
 function saveOfflineDraft() {
   offlineEdited = true;
   try {
     localStorage.setItem('gm_offline_draft', JSON.stringify({
-      memos: deepClone(memos),
-      knownFiles: [...knownFiles],
-      backupKeys: [...backupKeys],
-      savedAt: new Date().toISOString()
+      memos: deepClone(memos), knownFiles:[...knownFiles],
+      backupKeys:[...backupKeys], savedAt:new Date().toISOString()
     }));
   } catch(e) {}
 }
-
-// 同期する
 document.getElementById('btn-sync-upload').addEventListener('click', async () => {
   document.getElementById('sync-modal').classList.remove('open');
   const localData = localStorage.getItem('gm_offline_draft');
@@ -1327,25 +896,19 @@ document.getElementById('btn-sync-upload').addEventListener('click', async () =>
     const draft = JSON.parse(localData);
     memos = draft.memos;
     savedSnapshot = deepClone(memos);
-    knownFiles = new Set(draft.knownFiles || [...knownFiles]);
-    backupKeys = draft.backupKeys || backupKeys;
+    knownFiles = new Set(draft.knownFiles||[...knownFiles]);
+    backupKeys = draft.backupKeys||backupKeys;
     renderTagFilterBar(); renderList();
-    const still = memos.find(x => x.id === currentId);
-    if (still) selectMemo(still.id);
-    else if (memos.length > 0) selectMemo(memos[0].id);
+    if (memos.length > 0) selectMemo(memos[0].id);
     await apiPatch(buildPatch());
     localStorage.removeItem('gm_offline_draft');
     offlineEdited = false;
     saveLocalCache();
     setOffline(false);
-    toast('Gistに同期しました ✓');
     setStatus('接続済み');
-  } catch(e) {
-    toast('同期に失敗しました', true);
-  }
+    toast('Gistに同期しました ✓');
+  } catch(e) { toast('同期に失敗しました', true); }
 });
-
-// 破棄してGistから読み込む
 document.getElementById('btn-sync-discard').addEventListener('click', async () => {
   document.getElementById('sync-modal').classList.remove('open');
   localStorage.removeItem('gm_offline_draft');
@@ -1356,24 +919,16 @@ document.getElementById('btn-sync-discard').addEventListener('click', async () =
     loadFromGist(data);
     setOffline(false);
     toast('Gistから再読み込みしました');
-  } catch(e) {
-    toast('読み込みに失敗しました', true);
-  }
+  } catch(e) { toast('読み込みに失敗しました', true); }
 });
-
-// ネット復帰を30秒ごとにAPIで確認
 setInterval(async () => {
   if (!isOffline) return;
   try {
     await apiGet();
     setOffline(false);
     const draft = localStorage.getItem('gm_offline_draft');
-    if (draft) {
-      document.getElementById('sync-modal').classList.add('open');
-    } else {
-      toast('オンラインに復帰しました');
-      setStatus('接続済み');
-    }
+    if (draft) document.getElementById('sync-modal').classList.add('open');
+    else { toast('オンラインに復帰しました'); setStatus('接続済み'); }
   } catch(e) {}
 }, 30000);
 
