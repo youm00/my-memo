@@ -196,45 +196,7 @@ function updateOfflineBanner() {
 
 
 
-// 同期する
-document.getElementById('btn-sync-upload').addEventListener('click', async () => {
-  document.getElementById('sync-modal').classList.remove('open');
-  const localData = localStorage.getItem('gm_offline_draft');
-  if (!localData) return;
-  try {
-    const draft = JSON.parse(localData);
-    memos = draft.memos;
-    savedSnapshot = deepClone(memos);
-    knownFiles = new Set(draft.knownFiles || [...knownFiles]);
-    backupKeys = draft.backupKeys || backupKeys;
-    renderTagFilterBar(); renderList();
-    const still = memos.find(x => x.id === currentId);
-    if (still) selectMemo(still.id);
-    else if (memos.length > 0) selectMemo(memos[0].id);
-    await apiPatch(buildPatch());
-    localStorage.removeItem('gm_offline_draft');
-    offlineEdited = false;
-    saveLocalCache();
-    toast('Gistに同期しました ✓');
-  } catch(e) {
-    toast('同期に失敗しました', true);
-  }
-});
 
-// 破棄してGistから読み込む
-document.getElementById('btn-sync-discard').addEventListener('click', async () => {
-  document.getElementById('sync-modal').classList.remove('open');
-  localStorage.removeItem('gm_offline_draft');
-  offlineEdited = false;
-  setStatus('再読み込み中…');
-  try {
-    const data = await apiGet();
-    loadFromGist(data);
-    toast('Gistから再読み込みしました');
-  } catch(e) {
-    toast('読み込みに失敗しました', true);
-  }
-});
 
 // オフライン中の編集をlocalStorageに保存
 function saveLocalCache() {
