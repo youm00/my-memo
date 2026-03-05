@@ -282,20 +282,6 @@ setTimeout(updateOfflineBanner, 500);
 
 // 2秒ごとに定期チェック（onlineイベントが発火しない場合の保険）
 setInterval(checkOnlineStatus, 2000);
-
-// ── 診断（status-badge を3回タップで表示） ──
-let diagTapCount = 0, diagTapTimer = null;
-document.getElementById('status-badge').addEventListener('click', () => {
-  diagTapCount++;
-  clearTimeout(diagTapTimer);
-  diagTapTimer = setTimeout(() => { diagTapCount = 0; }, 800);
-  if (diagTapCount >= 3) {
-    diagTapCount = 0;
-    const swOk = navigator.serviceWorker.controller ? 'yes' : 'no';
-    const msg = 'onLine:' + navigator.onLine + ' SW:' + swOk + ' offline_var:' + isOffline;
-    alert(msg);
-  }
-});
 </script>
 </head>
 <body>
@@ -1147,20 +1133,6 @@ function saveOfflineDraft() {
 
 // 初期化時にオフライン状態を反映（即時 + 定期チェック）
 
-
-// ── 診断（status-badge を3回タップで表示） ──
-let diagTapCount = 0, diagTapTimer = null;
-document.getElementById('status-badge').addEventListener('click', () => {
-  diagTapCount++;
-  clearTimeout(diagTapTimer);
-  diagTapTimer = setTimeout(() => { diagTapCount = 0; }, 800);
-  if (diagTapCount >= 3) {
-    diagTapCount = 0;
-    const swOk = navigator.serviceWorker.controller ? 'yes' : 'no';
-    const msg = 'onLine:' + navigator.onLine + ' SW:' + swOk + ' offline_var:' + isOffline;
-    alert(msg);
-  }
-});
 </script>
 </body>
 </html>
