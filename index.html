@@ -282,6 +282,19 @@ setTimeout(updateOfflineBanner, 500);
 
 // 2秒ごとに定期チェック（onlineイベントが発火しない場合の保険）
 setInterval(checkOnlineStatus, 2000);
+
+// ── 診断ツール（一時的） ──
+document.getElementById('btn-diag').addEventListener('click', () => {
+  const info = [
+    'navigator.onLine: ' + navigator.onLine,
+    'isOffline(var): ' + isOffline,
+    'SW supported: ' + ('serviceWorker' in navigator),
+    'SW registered: ' + (navigator.serviceWorker.controller ? 'yes' : 'no'),
+    'banner visible: ' + document.getElementById('offline-banner').classList.contains('show'),
+    'draft in storage: ' + (!!localStorage.getItem('gm_offline_draft')),
+  ].join('\n');
+  alert(info);
+});
 </script>
 </head>
 <body>
@@ -292,6 +305,7 @@ setInterval(checkOnlineStatus, 2000);
   <span id="status-badge">—</span>
   <span id="autosave-indicator">自動保存中…</span>
   <button class="topbar-btn" id="btn-darkmode" title="ダークモード切替">🌙</button>
+  <button class="topbar-btn" id="btn-diag" title="診断">🔍</button>
   <button class="topbar-btn" id="btn-backup-open">バックアップ</button>
   <button class="topbar-btn" id="btn-export-open">エクスポート</button>
   <button class="topbar-btn" id="btn-settings">設定</button>
@@ -1133,6 +1147,19 @@ function saveOfflineDraft() {
 
 // 初期化時にオフライン状態を反映（即時 + 定期チェック）
 
+
+// ── 診断ツール（一時的） ──
+document.getElementById('btn-diag').addEventListener('click', () => {
+  const info = [
+    'navigator.onLine: ' + navigator.onLine,
+    'isOffline(var): ' + isOffline,
+    'SW supported: ' + ('serviceWorker' in navigator),
+    'SW registered: ' + (navigator.serviceWorker.controller ? 'yes' : 'no'),
+    'banner visible: ' + document.getElementById('offline-banner').classList.contains('show'),
+    'draft in storage: ' + (!!localStorage.getItem('gm_offline_draft')),
+  ].join('\n');
+  alert(info);
+});
 </script>
 </body>
 </html>
