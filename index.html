@@ -753,10 +753,8 @@ document.getElementById('exp-txt').addEventListener('click', () => {
 document.getElementById('exp-md').addEventListener('click', () => {
   const m = memos.find(x=>x.id===currentId);
   if (!m) { toast('メモを選択してください', true); return; }
-  const tags = (m.tags||[]).length > 0 ? '
-tags: '+m.tags.map(t=>'#'+t).join(' ') : '';
-  const updated = m.updatedAt ? '
-updated: '+fmtDate(m.updatedAt) : '';
+  const tags = (m.tags||[]).length > 0 ? '\ntags: '+m.tags.map(t=>'#'+t).join(' ') : '';
+  const updated = m.updatedAt ? '\nupdated: '+fmtDate(m.updatedAt) : '';
   download(m.title||'memo', '.md', '# '+(m.title||'無題')+tags+updated+'
 
 '+m.body);
@@ -764,19 +762,13 @@ updated: '+fmtDate(m.updatedAt) : '';
 });
 document.getElementById('exp-all').addEventListener('click', () => {
   const lines = memos.map(m => {
-    const tags = (m.tags||[]).length > 0 ? '
-tags: '+m.tags.map(t=>'#'+t).join(' ') : '';
-    const updated = m.updatedAt ? '
-updated: '+fmtDate(m.updatedAt) : '';
+    const tags = (m.tags||[]).length > 0 ? '\ntags: '+m.tags.map(t=>'#'+t).join(' ') : '';
+    const updated = m.updatedAt ? '\nupdated: '+fmtDate(m.updatedAt) : '';
     return '# '+(m.title||'無題')+tags+updated+'
 
 '+m.body;
   });
-  download('gist-memo-all', '.md', lines.join('
-
----
-
-'));
+  download('gist-memo-all', '.md', lines.join('\n\n---\n\n'));
   document.getElementById('export-modal').classList.remove('open');
 });
 function download(name, ext, text) {
